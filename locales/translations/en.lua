@@ -1,0 +1,16 @@
+Language["en"] = {
+    interact_far = "You are too far away to do this.",
+    no_player_near = "There are no players nearby to perform this action.",
+    no_permission = "You do not have permission to do this.",
+    heist_start = "Start Heist",
+    heist_reward = "Rewards up to",
+    heist_vehicle_select = "Select Vehicle",
+    heist_leave = "Leave Heist",
+    heist_vehicle_change = "Change Vehicle",
+    heist_player = "%s (ID: %s)",
+    heist_set_cut = "Percentage (%s%)",
+    heist_kick = "Kick Player",
+    heist_promote = "Promote to Heist Leader",
+    must_be_leader = "You must be the leader to do this.",
+    heist_already_started = "This heist is already in-progress.",
+}
