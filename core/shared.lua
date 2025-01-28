@@ -21,3 +21,7 @@ function NumberWithCommas(x)
     local left, num, right = string.match(x, '^([^%d]*%d)(%d*)(.-)$')
     return "$" .. left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())
 end
+
+function tolower(str)
+    return string.lower(str)
+end

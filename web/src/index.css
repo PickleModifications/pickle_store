@@ -7,8 +7,8 @@ html {
 }
 
 :root,  body {
-  /* background: none !important; */
-  background-image: url("assets/heist_background.png") !important;
+  background: none !important;
+  /* background-image: url("assets/heist_background.png") !important; */
 }
 
 * {
@@ -118,5 +118,8 @@ html {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  :focus-visible {
+      outline: none !important;
   }
 }

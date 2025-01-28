@@ -11,11 +11,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <LoadingProvider>
           <UserProvider>
-            <App />
+            <LoadingProvider>
+              <App />
+            </LoadingProvider>
           </UserProvider>
-        </LoadingProvider>
       </ThemeProvider>
     </ConfigProvider>
   </StrictMode>,

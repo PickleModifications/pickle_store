@@ -3,17 +3,17 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
 interface LoadingContextProps {
-    isLoading: boolean;
-    setLoading: (loading: boolean) => void;
+    isLoading: JSX.Element | null | undefined;
+    setLoading: (loadingContent: JSX.Element) => void;
 }
 
 const LoadingContext = createContext<LoadingContextProps | undefined>(undefined);
 
 export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState<JSX.Element | null>(null);
 
-    const setLoading = (loading: boolean) => {
-        setIsLoading(loading);
+    const setLoading = (loadingContent?: JSX.Element | null) => {
+        setIsLoading(loadingContent || null);
     };
 
     return (

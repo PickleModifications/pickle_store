@@ -3,8 +3,6 @@ import { Product } from "@/components/product/Product";
 import { ProductOption } from "@/components/product/Product";
 export let products: Product[] = [];
 
-export const TEBEX_API_PUBLIC = "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc"
-
 export type Category = {
     id: number;
     name: string;
@@ -31,9 +29,9 @@ export function getPriceString(price: number, productType: string | "single", cu
   ) + (productType === "subscription" ? "/mo" : "") + " " + currency;
 }
 
-export async function getProducts(id: string) {
+export async function getProducts(id: string, tebexApiKey: string) {
   if (products.length == 0) {
-    const response = await fetch('https://headless.tebex.io/api/accounts/'+TEBEX_API_PUBLIC+'/packages?basketIdent='+id, {
+    const response = await fetch('https://headless.tebex.io/api/accounts/'+tebexApiKey+'/packages?basketIdent='+id, {
       method: 'GET',
       headers: {}
     });
@@ -92,15 +90,18 @@ export async function getProducts(id: string) {
   return products;
 }
 
-export async function getApiUser(id: string) {
-  const products = await getProducts(id);
-  const req = await fetch('https://headless.tebex.io/api/accounts/'+TEBEX_API_PUBLIC+'/baskets/'+id, {
+export async function getApiUser(id: string, tebexApiKey: string, skipProducts?: boolean) {
+  const req = await fetch('https://headless.tebex.io/api/accounts/'+tebexApiKey+'/baskets/'+id, {
       method: 'GET',
       headers: {}
   });
   const data = await req.json();
   if (data && data.data) {
       data.data.status = 200;
+      if (skipProducts) {
+          return data.data;
+      }
+      const products = await getProducts(id, tebexApiKey);
       for (let i=0; i<data.data.packages.length; i++) {
           const product = products.find((p) => {
               return p.id == data.data.packages[i].id || p.productOptions.find((o) => o.id == data.data.packages[i].id);
@@ -117,16 +118,16 @@ export async function getApiUser(id: string) {
   }
 }
  
-export async function ensureCart(id?: string) {
+export async function ensureCart(id: string | null | undefined, tebexApiKey: string) {
   let user: User | null = null;
   if (id) {
-    const foundUser = await getApiUser(id);
-    if (foundUser && foundUser.id) {
+    const foundUser = await getApiUser(id, tebexApiKey);
+    if (foundUser && foundUser.id && !foundUser.complete) {
       user = foundUser;
     }
   }
   if (!user) {
-    const req = await fetch('https://headless.tebex.io/api/accounts/'+TEBEX_API_PUBLIC+'/baskets', {
+    const req = await fetch('https://headless.tebex.io/api/accounts/'+tebexApiKey+'/baskets', {
       method: 'POST',
       headers: {},
       body: JSON.stringify({}),
@@ -140,31 +141,35 @@ export async function ensureCart(id?: string) {
   return user;
 }
 
-export async function performCartAction(id: string, addPackageCart?: number, removePackageCart?: number, discordId?: string) {
+export async function performCartAction(id: string, tebexApiKey: string, addPackageCart?: number, removePackageCart?: number, discordId?: string) {
   if (!id) {
     return { error: 'ID parameter is required', status: 400 };
   }
   if (addPackageCart) {
-      const user = await getApiUser(id);
+      const user = await getApiUser(id, tebexApiKey);
       if (!user || !user.ident) {
           return { error: 'User not found' , status: 404 };
+      }
+      const payload = {
+        package_id: addPackageCart,
+        quantity: 1,
+        variable_data: {
+          discord_id: (discordId || undefined),
+          discord_invite_link_to: "placeholder@placeholder.placeholder"
+        }
       }
       const response = await fetch('https://headless.tebex.io/api/baskets/'+id+'/packages', {
           method: 'POST',
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-              package_id: addPackageCart,
-              quantity: 1,
-              variable_data: (discordId ? ({discord_id: discordId}) : null)
-          }),
+          body: JSON.stringify(payload),
       });
       const data = await response.json();
       return data;
   }
   else if (removePackageCart) {
-      const user = await getApiUser(id);
+      const user = await getApiUser(id, tebexApiKey);
       if (!user || !user.ident) {
         return { error: 'User not found' ,  status: 404 };
       }

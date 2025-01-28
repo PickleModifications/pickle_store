@@ -1,12 +1,24 @@
 "use client";
 
-import { ensureCart, getBaseURL } from '@/utils';
-import { User } from '@/components/cart/Cart';
+import { ensureCart, getBaseURL, getProducts } from '@/utils';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useLoading } from './loading';
 import { useToast } from '@/hooks/use-toast';
+import { useConfig } from './config';
+import { fetchNui } from './nui/fetchNui';
+import { Product } from '@/components/product/Product';
+import { useNuiEvent } from './nui/useNui';
 
-export const BASKET_COOKIE_ID = "tbex-basketIdentifier";
+export type User = {
+  ident: string;
+  username: string;
+  username_id: number;
+  discord: {
+      id: string;
+      username: string;
+  };
+  coins: number;
+  products: Product[];
+}
 
 interface UserContextProps {
     user: User | null;
@@ -17,25 +29,47 @@ const UserContext = createContext<UserContextProps | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const { toast } = useToast();
-    const [user, setUser] = useState<User | null>(null);
-    const { setLoading } = useLoading();
-    useEffect(() => {
+    const {config, setConfig} = useConfig();
+    const [user, setUser] = useState<User | null>(null);    
+    const [configState, setConfigState] = useState(config);
+    useNuiEvent('updatePlayerCoins', (data) => {
+      if (user) {
+        setUser(
+          {
+            ...user,
+            coins: data.coins || 0
+          }
+        );
+      }
+    });
+    useEffect(() => { 
+      setConfigState(config) 
+      if (config.tebexApiKey !== "UNDEFINED") {
         const fetchData = async () => {
-          const basketIdentifier = localStorage.getItem(BASKET_COOKIE_ID) || undefined;
+          const basketIdentifier = config.basketIdentifier;
           let updatedUser: User | null = null;
-          const data = await ensureCart(basketIdentifier);
-          if (data) {
-            console.log("Fetched / Created basket:", data);
-            updatedUser = data;
-            localStorage.setItem(BASKET_COOKIE_ID, data.ident);
+          const user = await ensureCart(basketIdentifier, config.tebexApiKey);
+          if (user) {
+            if (basketIdentifier !== user.ident) {
+              fetchNui("updateBasketIdentifier", user.ident);
+              config.basketIdentifier = user.ident;
+              setConfig(config);
+            }
+            updatedUser = user;
+            // localStorage.setItem(BASKET_COOKIE_ID, data.ident);
           }
           if (updatedUser) {
+            updatedUser.products = await getProducts(updatedUser.ident, config.tebexApiKey);
+            updatedUser.discord = { id: config.discord_id as string, username: config.username as string };
+            updatedUser.username_id = config.username_id as number;
+            updatedUser.username = config.username as string;
+            updatedUser.coins = config.coins || 0;
             setUser(updatedUser);
           }
-          setLoading(false);
         };
         fetchData();
-      }, []);
+      }
+    }, [config]);
     return (
         <UserContext.Provider value={{ user, setUser }}>
             {children}
