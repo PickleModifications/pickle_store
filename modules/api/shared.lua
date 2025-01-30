@@ -36,22 +36,24 @@ function GetCustomCommand(command, rawFields, extraFields)
     if not commandPrefix then return end
     local customCommandCfg = Config.CustomCommands[commandPrefix]
     if not customCommandCfg then return end
-    local fieldsCfg = customCommandCfg.fields
+    local fieldsCfg = customCommandCfg.fields or {}
     local fields = {}
     for i=1, #fieldsCfg do
         local field = fieldsCfg[i]
         local value = rawFields[i]
-        if not value then return end
-        fields[field.variable] = value
+        if value then 
+            fields[field.variable] = value
+        end
     end
     fields.productId = extraFields.productId
     fields.source = extraFields.source
-    local commandFormat = split(customCommandCfg.format or "", " ")
+    local commandFormat = split(customCommandCfg.commandParameters or "", " ")
     for i=1, #args do
-        local currentVariable = commandFormat[i]:match("{(.-)}")
-        print("currentVariable", currentVariable, args[i])
-        if currentVariable then 
-            fields[currentVariable] = args[i]
+        if commandFormat[i] then
+            local currentVariable = commandFormat[i]:match("{(.-)}")
+            if currentVariable then 
+                fields[currentVariable] = args[i]
+            end
         end
     end
     return {

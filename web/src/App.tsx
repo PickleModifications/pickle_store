@@ -8,6 +8,7 @@ import { Config, useConfig } from './providers/config'
 import { LoadingProvider, useLoading } from './providers/loading'
 import { useNuiEvent } from './providers/nui/useNui'
 import { fetchNui } from './providers/nui/fetchNui'
+import { createGlobalStyle } from 'styled-components';
 
 export type Store = {
   products: Product[]
@@ -76,9 +77,10 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+  console.log(configState.theme)
   return (
     <div className="w-screen h-screen absolute top-0 left-0">
-        <div className="bg-zinc-950 absolute rounded-md transition-opacity duration-200" style={{ opacity: (opening ? 1 : 0), width: 1280, height: 720, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
+        <div className="bg-background absolute rounded-md transition-opacity duration-200" style={{ opacity: (opening ? 1 : 0), width: 1280, height: 720, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
           {open && (
             <>
               <Navbar pages={pages} onPageSelect={(id: number) => {
@@ -89,7 +91,7 @@ function App() {
               </div>
               <div className="transform transform-z-0 rounded-md" id='dialog-container' style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "hidden", pointerEvents: "none", zIndex: 100}}></div>
               <div className="transform transform-z-0 rounded-md" id='loading-container' style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "hidden", pointerEvents: "none", zIndex: 150}}>
-                {loadingState && (<div className="pointer-events-auto select-none flex justify-center items-center w-full h-full bg-zinc-950 bg-opacity-50 backdrop-blur-sm"> 
+                {loadingState && (<div className="pointer-events-auto select-none flex justify-center items-center w-full h-full bg-opacity-50 backdrop-blur-sm"> 
                   {loadingState}
                 </div>)}
               </div>

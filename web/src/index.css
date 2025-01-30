@@ -83,7 +83,6 @@ html {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
-
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -109,6 +108,155 @@ html {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+  }
+  .light {
+      /* Name: custom color palette
+         Author: Ilias Ism
+         URL: https://gradient.page */
+  
+      /* CSS: .bg-gradient { background: var(--gradient) } */
+      --gradient: #2C3E50;
+      --background: 223 96.45% 98.48%;
+      --foreground: 223 2.9% 0.96%;
+  
+      --muted: 223 2.9% 92.4%;
+      --muted-foreground: 223 1.45% 42.4%;
+  
+      --popover: 223 66.8% 92.4%;
+      --popover-foreground: 223 2.9% 1.2%;
+  
+      --card: 223 66.8% 92.4%;
+      --card-foreground: 223 2.9% 1.2%;
+  
+      --border: 223 7.9% 89.96%;
+      --input: 223 7.9% 89.96%;
+  
+      --primary: 223 29% 24%;
+      --primary-foreground: 223 0.58% 92.4%;
+  
+      --secondary: 223 1.45% 96.2%;
+      --secondary-foreground: 223 2.7399999999999998% 12.4%;
+  
+      --accent: 223 1.45% 96.2%;
+      --accent-foreground: 223 2.7399999999999998% 12.4%;
+  
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+  
+      --ring: 223 29% 24%;
+  
+      --radius: 0.5rem;
+  }
+  .midnight {
+    /* Name: custom color palette
+       Author: Ilias Ism
+       URL: https://gradient.page */
+  
+    /* CSS: .bg-gradient { background: var(--gradient) } */
+    --gradient: linear-gradient(to top left,#83a4d4,#b6fbff);
+  
+    --background: 229 31.849999999999998% 5.36%;
+    --foreground: 229 4.9% 98.35%;
+  
+    --muted: 229 24.5% 20.1%;
+    --muted-foreground: 229 4.9% 56.7%;
+  
+    --popover: 229 55.2% 8.71%;
+    --popover-foreground: 229 4.9% 98.35%;
+  
+    --card: 229 55.2% 8.71%;
+    --card-foreground: 229 4.9% 98.35%;
+  
+    --border: 229 24.5% 20.1%;
+    --input: 229 24.5% 20.1%;
+  
+    --primary: 229 49% 67%;
+    --primary-foreground: 229 4.9% 6.7%;
+  
+    --secondary: 229 24.5% 20.1%;
+    --secondary-foreground: 229 4.9% 98.35%;
+  
+    --accent: 229 24.5% 20.1%;
+    --accent-foreground: 229 4.9% 98.35%;
+  
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 229 4.9% 98.35%;
+  
+    --ring: 229 49% 67%;
+  }
+  .red {
+    /* Name: custom color palette
+       Author: Ilias Ism
+       URL: https://gradient.page */
+  
+    /* CSS: .bg-gradient { background: var(--gradient) } */
+    --gradient: linear-gradient(to top left,#e52d27,#b31217);
+  
+    --background: 2 50.7% 4.24%;
+    --foreground: 2 7.800000000000001% 97.65%;
+  
+    --muted: 2 39% 15.9%;
+    --muted-foreground: 2 7.800000000000001% 55.3%;
+  
+    --popover: 2 49.4% 6.890000000000001%;
+    --popover-foreground: 2 7.800000000000001% 97.65%;
+  
+    --card: 2 49.4% 6.890000000000001%;
+    --card-foreground: 2 7.800000000000001% 97.65%;
+  
+    --border: 2 39% 15.9%;
+    --input: 2 39% 15.9%;
+  
+    --primary: 2 78% 53%;
+    --primary-foreground: 2 7.800000000000001% 5.300000000000001%;
+  
+    --secondary: 2 39% 15.9%;
+    --secondary-foreground: 2 7.800000000000001% 97.65%;
+  
+    --accent: 2 39% 15.9%;
+    --accent-foreground: 2 7.800000000000001% 97.65%;
+  
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 2 7.800000000000001% 97.65%;
+  
+    --ring: 2 78% 53%;
+  }
+  .pickle {
+    /* Name: custom color palette
+       Author: Ilias Ism
+       URL: https://gradient.page */
+  
+    /* CSS: .bg-gradient { background: var(--gradient) } */
+    --gradient: #00FF7F;
+  
+    --background: 159 65% 4%;
+    --foreground: 159 10% 97.5%;
+  
+    --muted: 159 50% 15%;
+    --muted-foreground: 159 10% 55%;
+  
+    --popover: 159 45% 6.5%;
+    --popover-foreground: 159 10% 97.5%;
+  
+    --card: 159 45% 6.5%;
+    --card-foreground: 159 10% 97.5%;
+  
+    --border: 159 50% 15%;
+    --input: 159 50% 15%;
+  
+    --primary: 159 100% 50%;
+    --primary-foreground: 159 10% 5%;
+  
+    --secondary: 159 50% 15%;
+    --secondary-foreground: 159 10% 97.5%;
+  
+    --accent: 159 50% 15%;
+    --accent-foreground: 159 10% 97.5%;
+  
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 159 10% 97.5%;
+  
+    --ring: 159 100% 50%;
   }
 }
 

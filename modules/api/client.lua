@@ -1,5 +1,6 @@
 function UpdateCoins(coins)
     LOCAL_DATA.coins = coins
+    print("Updated coins to: " .. coins)
     SendNUIMessage({
         type = "updatePlayerCoins",
         coins = coins

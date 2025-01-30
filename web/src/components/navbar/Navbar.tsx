@@ -59,7 +59,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                       <div
                         key={linkId}
                         onClick={() => onPageSelect(linkId)}
-                        className="cursor-pointer group inline-flex h-9 w-max items-center justify-center hover:bg-white/10 rounded-md px-3 py-1 text-sm font-semibold transition ease-in-out duration-200"
+                        className="cursor-pointer group inline-flex h-9 w-max items-center justify-center hover:bg-foreground/10 rounded-md px-3 py-1 text-sm font-semibold transition ease-in-out duration-200"
                       >
                         {link.label}
                       </div>
@@ -71,7 +71,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                 <Dialog>
                   <DialogTrigger className="flex items-stretch">
                     <div className="flex gap-0 items-center cursor-pointer hover:scale-105 transition ease-in-out duration-200">
-                      <div style={{borderRadius: "5px 0px 0px 5px"}} className="flex items-center gap-1 bg-white/10 p-5 px-2 py-1">
+                      <div style={{borderRadius: "5px 0px 0px 5px"}} className="flex items-center gap-1 bg-secondary p-5 px-2 py-1">
                         <img className="h-5 w-5 rounded-md" src={configState.coinCurrency.image} alt=""/>
                         <div className="font-semibold">{userState.coins?.toLocaleString() || "0"}</div>
                       </div>
@@ -110,7 +110,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                                       setLoading(
                                         <div className="flex flex-col items-center justify-center">
                                           <div className="flex items-center gap-2">
-                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <svg className="animate-spin h-5 w-5 " xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
@@ -157,7 +157,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                 }
               }}>
                 <DialogTrigger>
-                  <div className="flex items-center gap-1 bg-white/10 rounded-md p-5 px-2 py-1 cursor-pointer hover:scale-105 transition ease-in-out duration-200">
+                  <div className="flex items-center gap-1 bg-secondary rounded-md p-5 px-2 py-1 cursor-pointer hover:scale-105 transition ease-in-out duration-200">
                     <div className="font-semibold">Redeem</div>
                   </div>
                 </DialogTrigger>
@@ -169,7 +169,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                       <input
                         type="text"
                         placeholder="Tebex Transaction ID (e.g. tbx-123-45-6789)"
-                        className="w-full p-1 border rounded-md bg-zinc-800 text-white placeholder-zinc-500"
+                        className="w-full p-1 border rounded-md bg-foreground/10"
                         value={tebexTransactionId}
                         onChange={(e) => setTebexTransactionId(e.target.value)}
                         onKeyDown={(e) => {
@@ -180,7 +180,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                           }
                         }}
                       />
-                      <Button className="bg-zinc-700 text-white hover:bg-zinc-600" onClick={() => {
+                      <Button variant="secondary" onClick={() => {
                         fetchNui("redeemTransaction", tebexTransactionId).then((response: any) => {
                           setStatusMessage(response.statusText)
                         })

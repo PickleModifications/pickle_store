@@ -35,6 +35,8 @@ export type Category = {
 
 export type Product = {
     id: number | string
+    globalLimit?: number
+    userLimit?: number
     isCoinPackage?: boolean
     type: string
     category?: Category
@@ -106,6 +108,9 @@ export function AddPackageToCart(ident: string, tebexApiKey: string, discord: st
 
 type EditState = {
     id: string | number
+    globalLimit?: number    
+    userLimit?: number
+    isCreating: boolean
     name: string
     description: string
     image: string
@@ -118,6 +123,186 @@ type EditState = {
     groups: string[]
     selectedCategory: string
     commands: string[]
+}
+
+function ProductManagement({product, setProduct} : {product: EditState, setProduct: (product: EditState | null) => void}) {
+    const {config} = useConfig();
+    const {user, setUser} = useUser();
+    const [configState, setConfigState] = useState(config);
+    const [userState, setUserState] = useState<User | null>(null);
+    useEffect(() => { setConfigState(config) }, [config]);
+    useEffect(() => { setUserState(user) }, [user]);
+    const data = getCategorizedProducts(userState, configState);
+    const categories = data.categories;
+    const categoriesOrder = data.categoriesOrder;
+    return (
+        <>
+            <DialogTitle className="flex flex-row items-center gap-2 pr-4">
+                {product.isCreating ? (
+                    <span>Creating New Product</span>
+                ) : (
+                    <span>Editing: {product.name}</span>
+                )}
+            </DialogTitle>
+            <div className="flex flex-col gap-4 pt-4 relative">
+                {(product.isCreating || product.id.toString().startsWith("coin")) && (
+                    <div className="flex flex-col gap-2 max-h-96 pr-2 overflow-y-auto">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">Name</label>
+                            <input
+                                placeholder="Product Name"
+                                type="text"
+                                value={product.name}
+                                onChange={(e) => setProduct({ ...product, name: e.target.value })}
+                                className="p-2 border rounded-md bg-muted "
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">Description</label>
+                            <textarea
+                                placeholder="Product Description"
+                                style={{height: 75}}
+                                value={product.description}
+                                onChange={(e) => setProduct({ ...product, description: e.target.value })}
+                                className="p-2 border text-xs rounded-md bg-muted  resize-none"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">Image URL</label>
+                            <input
+                                type="text"
+                                placeholder="Image URL"
+                                value={product.image}
+                                onChange={(e) => setProduct({ ...product, image: e.target.value })}
+                                className="p-2 border rounded-md bg-muted "
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">Coins</label>
+                            <input
+                                type="number"
+                                min={0}
+                                placeholder={"Amount of "+configState.coinCurrency?.plural.toLowerCase()+" to charge"}
+                                value={product.base_price}
+                                onChange={(e) => setProduct({ ...product, base_price: parseFloat(e.target.value) })}
+                                className="p-2 border rounded-md bg-muted "
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">Global Limit (0 = No Limit)</label>
+                            <input
+                                type="number"
+                                min={0}
+                                placeholder={"Limit of how many times this can be purchased globally."}
+                                value={product.globalLimit || 0}
+                                onChange={(e) => setProduct({ ...product, globalLimit: parseFloat(e.target.value) })}
+                                className="p-2 border rounded-md bg-muted "
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">User Limit (0 = No Limit)</label>
+                            <input
+                                type="number"
+                                min={0}
+                                placeholder={"Limit of how many times this can be purchased per user."}
+                                value={product.userLimit || 0}
+                                onChange={(e) => setProduct({ ...product, userLimit: parseFloat(e.target.value) })}
+                                className="p-2 border rounded-md bg-muted "
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold">Commands</label>
+                            <div className="flex flex-col gap-2">
+                                {product.commands.map((command, index) => (
+                                    <div key={index} className="flex flex-row gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            value={command}
+                                            placeholder="pts_giveitem bread 10"
+                                            onChange={(e) => {
+                                                const newCommands = [...product.commands];
+                                                newCommands[index] = e.target.value;
+                                                setProduct({ ...product, commands: newCommands });
+                                            }}
+                                            className="p-2 border rounded-md bg-muted  flex-1"
+                                            spellCheck={false}
+                                        />
+                                        <Button variant="destructive" onClick={() => {
+                                            const newCommands = product.commands.filter((_, i) => i !== index);
+                                            setProduct({ ...product, commands: newCommands });
+                                        }}>
+                                            Delete
+                                        </Button>
+                                    </div>
+                                ))}
+                                <Button variant="secondary" onClick={() => {
+                                    setProduct({ ...product, commands: [...product.commands, ""] });
+                                }}>
+                                    Add Command
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold">Category</label>
+                    <select
+                        value={product.selectedCategory}
+                        onChange={(e) => setProduct({ ...product, category: (e.target.value == "new" ? "" : e.target.value), selectedCategory: e.target.value })}
+                        className="p-2 border rounded-md bg-muted "
+                    >
+                        <option key={"all"} value={"all"}>
+                            No Category Selected
+                        </option>
+                        {categoriesOrder.map((category) => (
+                            category !== "all" && (
+                                <option key={category} value={category}>
+                                    {categories[category].label}
+                                </option>
+                            )
+                        ))}
+                        <option value="new">Enter new category</option>
+                    </select>
+                    {product.selectedCategory === "new" && (
+                        <input
+                            type="text"
+                            placeholder="New category"
+                            onChange={(e) => setProduct({ ...product, category: e.target.value })}
+                            className="p-2 border rounded-md bg-muted  mt-2"
+                        />
+                    )}
+                </div>
+                <div className="flex flex-row gap-2 items-center justify-between">
+                    <div className="flex flex-row gap-2">
+                        <Button variant="secondary" onClick={() => {
+                            if (product.isCreating) {
+                                fetchNui("createProduct", product);
+                            }
+                            else {
+                                fetchNui("updateProduct", product);
+                            }
+                            setProduct(null);
+                        }}>
+                            <Save size={16}/> Save Product
+                        </Button>
+                        {product.id.toString().startsWith("coin") && (
+                            <Button variant="destructive" onClick={() => {
+                                fetchNui("deleteProduct", product.id);
+                                setProduct(null);
+                            }}>
+                                <Trash2 size={16}/>
+                            </Button>
+                        )}
+                    </div>
+                    <Button variant="secondary" onClick={() => {
+                        setProduct(null);
+                    }}>
+                        Discard Changes
+                    </Button>
+                </div>
+            </div>
+        </>
+    )
 }
 
 export function ProductCard({ product }: { product: Product }) {
@@ -148,7 +333,7 @@ export function ProductCard({ product }: { product: Product }) {
                 }
             }}>
                 <DialogTrigger>
-                    <div className="bg-zinc-900 rounded-md animate-appear relative select-none cursor-pointer filter brightness-80 hover:brightness-125 hover:scale-90 hover:z-1 z-0 scale-100 transition ease-in duration-200">
+                    <div className="bg-muted rounded-md animate-appear relative select-none cursor-pointer filter brightness-80 hover:brightness-125 hover:scale-90 hover:z-1 z-0 scale-100 transition ease-in duration-200">
                         <AspectRatio className="flex" ratio={16 / 9}>
                             <Image className="rounded-md max-h-full" src={product.image} alt="" width={"100%"} height={"100%"}/>
                             <div className="absolute bottom-0 left-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-75">
@@ -159,7 +344,7 @@ export function ProductCard({ product }: { product: Product }) {
                             {product.isCoinPackage ? (
                                 <div style={{paddingTop: 2, paddingBottom: 1}} className="flex flex-row items-center gap-1">
                                     <img className="w-4 h-4 rounded-sm" src={configState.coinCurrency?.image} alt=""/>
-                                    <span className="text-sm font-semibold">{product.base_price.toLocaleString()}</span> 
+                                    <span className="text-sm font-semibold">{product.base_price > 0 ? product.base_price.toLocaleString() : "Free"}</span> 
                                 </div>
                             ) : (
                                 <>
@@ -173,149 +358,19 @@ export function ProductCard({ product }: { product: Product }) {
                     </div>
                 </DialogTrigger>
                 <DialogContent>
-                <DialogHeader  style={{minWidth: 400}}>
+                <DialogHeader  style={{minWidth: 350, maxWidth: 400}}>
                     {editState ? (
-                        <>
-                            <DialogTitle className="flex flex-row items-center gap-2 pr-4">
-                                <span>Editing: {editState.name}</span>
-                            </DialogTitle>
-                            <div className="flex flex-col gap-4 pt-4 relative">
-                                {product.id.toString().startsWith("coin") && (
-                                    <div className="flex flex-col gap-2 max-h-96 pr-2 overflow-y-auto">
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-sm font-semibold">Name</label>
-                                            <input
-                                                placeholder="Product Name"
-                                                type="text"
-                                                value={editState.name}
-                                                onChange={(e) => setEditState({ ...editState, name: e.target.value })}
-                                                className="p-2 border rounded-md bg-zinc-900 text-white"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-sm font-semibold">Description</label>
-                                            <textarea
-                                                placeholder="Product Description"
-                                                style={{height: 75}}
-                                                value={editState.description}
-                                                onChange={(e) => setEditState({ ...editState, description: e.target.value })}
-                                                className="p-2 border text-xs rounded-md bg-zinc-900 text-white resize-none"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-sm font-semibold">Image URL</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Image URL"
-                                                value={editState.image}
-                                                onChange={(e) => setEditState({ ...editState, image: e.target.value })}
-                                                className="p-2 border rounded-md bg-zinc-900 text-white"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-sm font-semibold">Coins</label>
-                                            <input
-                                                type="number"
-                                                placeholder={"Amount of "+configState.coinCurrency?.plural.toLowerCase()+" to charge"}
-                                                value={editState.base_price}
-                                                onChange={(e) => setEditState({ ...editState, base_price: parseFloat(e.target.value) })}
-                                                className="p-2 border rounded-md bg-zinc-900 text-white"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-sm font-semibold">Commands</label>
-                                            <div className="flex flex-col gap-2">
-                                                {editState.commands.map((command, index) => (
-                                                    <div key={index} className="flex flex-row gap-2 items-center">
-                                                        <input
-                                                            type="text"
-                                                            value={command}
-                                                            placeholder="pts_giveitem {pts_server_id} bread 10"
-                                                            onChange={(e) => {
-                                                                const newCommands = [...editState.commands];
-                                                                newCommands[index] = e.target.value;
-                                                                setEditState({ ...editState, commands: newCommands });
-                                                            }}
-                                                            className="p-2 border rounded-md bg-zinc-900 text-white flex-1"
-                                                            spellCheck={false}
-                                                        />
-                                                        <Button variant="destructive" onClick={() => {
-                                                            const newCommands = editState.commands.filter((_, i) => i !== index);
-                                                            setEditState({ ...editState, commands: newCommands });
-                                                        }}>
-                                                            Delete
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                                <Button variant="secondary" onClick={() => {
-                                                    setEditState({ ...editState, commands: [...editState.commands, ""] });
-                                                }}>
-                                                    Add Command
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-semibold">Category</label>
-                                    <select
-                                        value={editState.selectedCategory}
-                                        onChange={(e) => setEditState({ ...editState, selectedCategory: e.target.value })}
-                                        className="p-2 border rounded-md bg-zinc-900 text-white"
-                                    >
-                                        <option key={"all"} value={"all"}>
-                                            No Category Selected
-                                        </option>
-                                        {categoriesOrder.map((category) => (
-                                            category !== "all" && (
-                                                <option key={category} value={category}>
-                                                    {categories[category].label}
-                                                </option>
-                                            )
-                                        ))}
-                                        <option value="new">Enter new category</option>
-                                    </select>
-                                    {editState.selectedCategory === "new" && (
-                                        <input
-                                            type="text"
-                                            placeholder="New category"
-                                            onChange={(e) => setEditState({ ...editState, category: e.target.value })}
-                                            className="p-2 border rounded-md bg-zinc-900 text-white mt-2"
-                                        />
-                                    )}
-                                </div>
-                                <div className="flex flex-row gap-2 items-center justify-between">
-                                    <div className="flex flex-row gap-2">
-                                        <Button variant="secondary" onClick={() => {
-                                            fetchNui("updateProduct", editState)
-                                            setEditState(null);
-                                        }}>
-                                            <Save size={16}/>
-                                        </Button>
-                                        {product.id.toString().startsWith("coin") && (
-                                            <Button variant="destructive" onClick={() => {
-                                                fetchNui("deleteProduct", editState)
-                                                setEditState(null);
-                                            }}>
-                                                <Trash2 size={16}/>
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <Button variant="secondary" onClick={() => {
-                                        setEditState(null);
-                                    }}>
-                                        Discard Changes
-                                    </Button>
-                                </div>
-                            </div>
-                        </>
+                        <ProductManagement product={editState} setProduct={setEditState} />
                     ) : (
                         <>
                             <DialogTitle className="flex flex-row items-center gap-2">
-                                {(configState.permissions.manageProducts) && (<Edit size={16} className="cursor-pointer hover:text-zinc-400" onClick={() => {
+                                {(configState.permissions.manageProducts) && (<Edit size={16} className="cursor-pointer hover:" onClick={() => {
                                     const category = getProductCategory(product.id, categories);
                                     setEditState({
                                         id: product.id,
+                                        globalLimit: product.globalLimit || 0,
+                                        userLimit: product.userLimit || 0,
+                                        isCreating: false,
                                         name: product.name,
                                         description: product.description,
                                         category: category,
@@ -340,7 +395,9 @@ export function ProductCard({ product }: { product: Product }) {
                                                     <iframe width={"100%"} height={"100%"} src={product.videoUrl} frameBorder="0" allowFullScreen />
                                                 </AspectRatio>
                                             ) || (
-                                                <img className="rounded-md max-h-48" src={product.image} alt=""/>
+                                                <AspectRatio ratio={16 / 9}>
+                                                    <img className="rounded-md w-full h-full" src={product.image} alt=""/>
+                                                </AspectRatio>
                                             )}
                                         <div className="max-h-48 overflow-y-auto" dangerouslySetInnerHTML={{__html: product.description}}>
                                         </div>
@@ -367,7 +424,7 @@ export function ProductCard({ product }: { product: Product }) {
                                                                     <span className="text-xs font-semibold">{field.label}</span>
                                                                     <span className="text-xs text-muted-foreground">{field.description}</span>
                                                                 </div>
-                                                                <input id={"input-fields-"+index+"-"+i} key={i} type="text" placeholder={field.placeholder} className="p-1 font-xs border rounded-md bg-zinc-900 text-white"/>
+                                                                <input id={"input-fields-"+index+"-"+i} key={i} type="text" placeholder={field.placeholder} className="p-1 font-xs border rounded-md bg-muted "/>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -389,7 +446,7 @@ export function ProductCard({ product }: { product: Product }) {
                                                 }) : []);
                                                 fetchNui("purchaseCoinProduct", { productId: product.id, fields });
                                             }}> <div>
-                                                    <span>Purchase for</span> <img src={configState.coinCurrency?.image} alt="" className="rounded-sm w-4 h-4 inline-block" /> <span>{product.base_price.toLocaleString()}</span>
+                                                    <span>Purchase for</span> <img src={configState.coinCurrency?.image} alt="" className="rounded-sm w-4 h-4 inline-block" /> <span>{product.base_price > 0 ? product.base_price.toLocaleString() : "Free"}</span>
                                                 </div>
                                             </Button>
                                         )}
@@ -399,7 +456,7 @@ export function ProductCard({ product }: { product: Product }) {
                                                     setLoading(
                                                         <div className="flex flex-col items-center justify-center">
                                                         <div className="flex items-center gap-2">
-                                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <svg className="animate-spin h-5 w-5 " xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                             </svg>
@@ -460,12 +517,14 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
                 }
             }
             if (configProduct.id.toString().startsWith("coin") && !configProduct.packageId && categories[targetCategory]) {
-                categories[targetCategory].products.push({
+                const productData = {
                     id: configProduct.id,
+                    globalLimit: configProduct.globalLimit || 0,
+                    userLimit: configProduct.userLimit || 0,
                     isCoinPackage: true,
                     type: "single",
                     name: configProduct.title,
-                    base_price: configProduct.coins || -1,
+                    base_price: configProduct.coins,
                     productOptions: [],
                     description: configProduct.description,
                     image: configProduct.image,
@@ -473,22 +532,10 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
                     currency: "USD",
                     groups: [],
                     commands:configProduct.commands || [],
-                });
+                }
+                categories[targetCategory].products.push(productData);
                 if (targetCategory != "all") {
-                    categories["all"].products.push({
-                        id: configProduct.id,
-                        isCoinPackage: true,
-                        type: "single",
-                        name: configProduct.title,
-                        base_price: configProduct.coins || -1,
-                        productOptions: [],
-                        description: configProduct.description,
-                        image: configProduct.image,
-                        discount: 0,
-                        currency: "USD",
-                        groups: [],
-                        commands:configProduct.commands || [],
-                    });
+                    categories["all"].products.push(productData);
                 }
             }
         }
@@ -518,9 +565,13 @@ export function Products() {
     const [firstLoad, setFirstLoad] = useState(true);
     const [newProductState, setNewProductState] = useState<EditState | null>(null);
     const [isAddingProduct, setIsAddingProduct] = useState(false);
+    const [currentTab, setCurrentTab] = useState("all");
     let data = getCategorizedProducts(userState, configState);
     let categories = data.categories;
     let categoriesOrder = data.categoriesOrder;
+    if (currentTab != "all" && (!categories[currentTab] || categories[currentTab].products.length == 0)) { 
+        setCurrentTab("all");
+    }
     return (
         <>
             <div className="w-full flex flex-col gap-2 pt-0 gap-4">
@@ -528,7 +579,14 @@ export function Products() {
                     <div className="animate-appear text-2xl font-semibold text-center">Products</div>
                     <div className="text-muted-foreground text-sm text-center">Over {(categories["all"] ? categories["all"].products.length : 0)}+ products to choose from, check them out!</div>
                 </div>
-                <Tabs defaultValue="all">
+                <Tabs value={currentTab} onValueChange={(value: string) => {
+                    if (!categories[value] || categories[value].products.length == 0) { 
+                        setCurrentTab("all");
+                    }
+                    else {
+                        setCurrentTab(value);
+                    }
+                }} defaultValue="all">
                 <div style={{height: 36}} className="relative rounded-sm sm:overflow-x-auto overflow-x-scroll bg-muted">
                     <TabsList className="absolute flex flex-row justify-stretch w-full select-none">
                         {categoriesOrder.map((category) => (
@@ -560,6 +618,9 @@ export function Products() {
                                                     <Button className="w-full" variant="secondary" onClick={() => {
                                                         setNewProductState({
                                                             id: -1,
+                                                            globalLimit: 0,
+                                                            userLimit: 0,
+                                                            isCreating: true,
                                                             name: "",
                                                             description: "",
                                                             image: "",
@@ -581,130 +642,7 @@ export function Products() {
                                             <DialogContent>
                                             <DialogHeader  style={{minWidth: 400}}>
                                                 {newProductState && (
-                                                    <>
-                                                        <DialogTitle className="flex flex-row items-center gap-2 pr-4">
-                                                            <span>Creating New Product</span>
-                                                        </DialogTitle>
-                                                        <div className="flex flex-col gap-4 pt-4 relative">
-                                                            <div className="flex flex-col gap-2 max-h-96 pr-2 overflow-y-auto">
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-sm font-semibold">Name</label>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={newProductState.name}
-                                                                        placeholder="Product Name"
-                                                                        onChange={(e) => setNewProductState({ ...newProductState, name: e.target.value })}
-                                                                        className="p-2 border rounded-md bg-zinc-900 text-white"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-sm font-semibold">Description</label>
-                                                                    <textarea
-                                                                        placeholder="Product Description"
-                                                                        style={{height: 75}}
-                                                                        value={newProductState.description}
-                                                                        onChange={(e) => setNewProductState({ ...newProductState, description: e.target.value })}
-                                                                        className="p-2 border text-xs rounded-md bg-zinc-900 text-white resize-none"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-sm font-semibold">Image URL</label>
-                                                                    <input
-                                                                        placeholder="Image URL"
-                                                                        type="text"
-                                                                        value={newProductState.image}
-                                                                        onChange={(e) => setNewProductState({ ...newProductState, image: e.target.value })}
-                                                                        className="p-2 border rounded-md bg-zinc-900 text-white"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-sm font-semibold">{configState.coinCurrency?.plural}</label>
-                                                                    <input
-                                                                        placeholder={"Amount of "+configState.coinCurrency?.plural.toLowerCase()+" to charge"}
-                                                                        type="number"
-                                                                        value={newProductState.base_price}
-                                                                        onChange={(e) => setNewProductState({ ...newProductState, base_price: parseFloat(e.target.value) })}
-                                                                        className="p-2 border rounded-md bg-zinc-900 text-white"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-sm font-semibold">Commands</label>
-                                                                    <div className="flex flex-col gap-2">
-                                                                        {newProductState.commands.map((command, index) => (
-                                                                            <div key={index} className="flex flex-row gap-2 items-center">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    value={command}
-                                                                                    placeholder="pts_giveitem {pts_server_id} bread 10"
-                                                                                    onChange={(e) => {
-                                                                                        const newCommands = [...newProductState.commands];
-                                                                                        newCommands[index] = e.target.value;
-                                                                                        setNewProductState({ ...newProductState, commands: newCommands });
-                                                                                    }}
-                                                                                    className="p-2 border rounded-md bg-zinc-900 text-white flex-1"
-                                                                                    spellCheck={false}
-                                                                                />
-                                                                                <Button variant="destructive" onClick={() => {
-                                                                                    const newCommands = newProductState.commands.filter((_, i) => i !== index);
-                                                                                    setNewProductState({ ...newProductState, commands: newCommands });
-                                                                                }}>
-                                                                                    Delete
-                                                                                </Button>
-                                                                            </div>
-                                                                        ))}
-                                                                        <Button variant="secondary" onClick={() => {
-                                                                            setNewProductState({ ...newProductState, commands: [...newProductState.commands, ""] });
-                                                                        }}>
-                                                                            Add Command
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-col gap-2">
-                                                                <label className="text-sm font-semibold">Category</label>
-                                                                <select
-                                                                    value={newProductState.selectedCategory}
-                                                                    onChange={(e) => setNewProductState({ ...newProductState, selectedCategory: e.target.value })}
-                                                                    className="p-2 border rounded-md bg-zinc-900 text-white"
-                                                                >
-                                                                    <option key={"all"} value={"all"}>
-                                                                        No Category Selected
-                                                                    </option>
-                                                                    {categoriesOrder.map((category) => (
-                                                                        category !== "all" && (
-                                                                            <option key={category} value={category}>
-                                                                                {categories[category].label}
-                                                                            </option>
-                                                                        )
-                                                                    ))}
-                                                                    <option value="new">Enter new category</option>
-                                                                </select>
-                                                                {newProductState.selectedCategory === "new" && (
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="New category"
-                                                                        onChange={(e) => setNewProductState({ ...newProductState, category: e.target.value })}
-                                                                        className="p-2 border rounded-md bg-zinc-900 text-white mt-2"
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <div className="flex flex-row gap-2 items-center justify-between">
-                                                                <div className="flex flex-row gap-2">
-                                                                    <Button variant="secondary" onClick={() => {
-                                                                        fetchNui("createProduct", newProductState)
-                                                                        setIsAddingProduct(false);
-                                                                    }}>
-                                                                        Create Product
-                                                                    </Button>
-                                                                </div>
-                                                                <Button variant="secondary" onClick={() => {
-                                                                    setIsAddingProduct(false);
-                                                                }}>
-                                                                    Cancel Creation
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    </>
+                                                    <ProductManagement product={newProductState} setProduct={setNewProductState} />
                                                 )}
                                                 <DialogDescription className="hidden"/>
                                             </DialogHeader>

@@ -1,6 +1,7 @@
 import { CustomPage } from '@/App';
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useNuiEvent } from './nui/useNui';
+import { useTheme } from '@/components/theme-provider';
 
 type Locale = {
     [key: string]: string;
@@ -15,6 +16,8 @@ type CoinCurrency = {
 
 type ConfigProductInfo = {
     id: number;
+    globalLimit?: number;
+    userLimit?: number;
     coins: number;
     title: string;
     description: string;
@@ -31,6 +34,7 @@ type CustomFields = {
 }
 
 export type Config = {
+    theme: string;
     tebexApiKey: string;
     tebexStoreUrl: string;
     tebexBuyUrl: string | undefined | null;
@@ -66,7 +70,9 @@ interface ConfigProviderProps {
 }
 
 export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
+    const {theme, setTheme} = useTheme();
     const [config, setConfig] = useState<Config>({
+        theme: "dark",
         tebexBuyUrl: undefined,
         productInfo: [],
         tebexStoreUrl: "https://tebex.io/",
@@ -84,6 +90,9 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         },
         customCommands: {}
     });
+    useEffect(() => {
+        setTheme(config.theme);
+    }, [config.theme]);
     useNuiEvent("updateProductInfo", function(data) {
         setConfig((config) => {
             return {

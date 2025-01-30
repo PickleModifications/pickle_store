@@ -20,6 +20,11 @@ export type User = {
   products: Product[];
 }
 
+export type BasketUser = {
+  ident: string;
+  products: Product[];
+}
+
 interface UserContextProps {
     user: User | null;
     setUser: (user: User | null) => void;
@@ -32,40 +37,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const {config, setConfig} = useConfig();
     const [user, setUser] = useState<User | null>(null);    
     const [configState, setConfigState] = useState(config);
-    useNuiEvent('updatePlayerCoins', (data) => {
+    const [coins, setCoins] = useState(0);
+    const [basket, setBasket] = useState<BasketUser | null>(null);
+    useEffect(() => {
       if (user) {
-        setUser(
-          {
-            ...user,
-            coins: data.coins || 0
-          }
-        );
+        setUser({...user, coins: coins});
       }
+    }, [coins]);
+    useNuiEvent('updatePlayerCoins', (data) => {
+      setCoins(data.coins);
     });
     useEffect(() => { 
       setConfigState(config) 
-      if (config.tebexApiKey !== "UNDEFINED") {
+      if (basket == null && config.tebexApiKey !== "UNDEFINED") {
         const fetchData = async () => {
-          const basketIdentifier = config.basketIdentifier;
-          let updatedUser: User | null = null;
-          const user = await ensureCart(basketIdentifier, config.tebexApiKey);
-          if (user) {
-            if (basketIdentifier !== user.ident) {
-              fetchNui("updateBasketIdentifier", user.ident);
-              config.basketIdentifier = user.ident;
-              setConfig(config);
-            }
-            updatedUser = user;
-            // localStorage.setItem(BASKET_COOKIE_ID, data.ident);
-          }
-          if (updatedUser) {
-            updatedUser.products = await getProducts(updatedUser.ident, config.tebexApiKey);
-            updatedUser.discord = { id: config.discord_id as string, username: config.username as string };
-            updatedUser.username_id = config.username_id as number;
-            updatedUser.username = config.username as string;
-            updatedUser.coins = config.coins || 0;
-            setUser(updatedUser);
-          }
+          const cart = await ensureCart(config.tebexApiKey);
+          console.log(cart);
+          setBasket(cart)
+          setUser({
+            ident: cart.ident,
+            products: cart.products || await getProducts(cart.ident, config.tebexApiKey),
+            username: user?.username || '',
+            username_id: user?.username_id || 0,
+            discord: user?.discord || { id: '', username: '' },
+            coins: user?.coins || (config.coins || 0)
+          })
         };
         fetchData();
       }

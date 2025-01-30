@@ -9,14 +9,14 @@ import { ConfigProvider } from './providers/config.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConfigProvider>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <UserProvider>
-            <LoadingProvider>
-              <App />
-            </LoadingProvider>
-          </UserProvider>
-      </ThemeProvider>
-    </ConfigProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ConfigProvider>
+        <UserProvider>
+          <LoadingProvider>
+            <App />
+          </LoadingProvider>
+        </UserProvider>
+      </ConfigProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

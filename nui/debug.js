@@ -4,10 +4,11 @@ function RunDebugEvents() {
     window.postMessage({
         type: "setConfig",
         config: {
+            theme: "midnight",
             tebexApiKey: "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc",
             image: "nui/src/assets/logo.png",
             customPages: [],
-            coins: 0,
+            coins: 25,
             coinCurrency: {
                 plural: "Coins",
                 singular: "Coin",
@@ -36,6 +37,8 @@ function RunDebugEvents() {
                     image: "https://dunb17ur4ymx4.cloudfront.net/packages/images/1fa9ed7ca58b4800414b49a2cd5e8de6793ae852.png",
                     coins: 50000,
                     category: "Vehicles",
+                    globalLimit: 50,
+                    userLimit: 25,
                     commands: [
                         "pts_givecar {pts_server_id} addersuper200xr",
                         "pts_givecar {pts_server_id} boomcruiser",

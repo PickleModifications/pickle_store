@@ -64,6 +64,16 @@ RegisterNUICallback("purchaseCoinProduct", function(data, cb)
     TriggerServerEvent("pickle_tebexstore:purchaseProduct", productId, rawFields)
 end)
 
+RegisterNUICallback("deleteProduct", function(productId, cb)
+    TriggerServerEvent("pickle_tebexstore:deleteProduct", productId)
+    cb(true)
+end)
+
+RegisterNUICallback("createProduct", function(data, cb)
+    TriggerServerEvent("pickle_tebexstore:createProduct", data)
+    cb(true)
+end)
+
 RegisterNetEvent("pickle_tebexstore:setRedeemStatus", function(status)
     SendNUIMessage({
         type = "setRedeemStatus",
@@ -89,6 +99,7 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function(data)
     SendNUIMessage({
         type = "setConfig",
         config = {
+            theme = Config.Theme,
             tebexStoreUrl = Config.TebexStoreUrl,
             tebexApiKey = Config.TebexApiKey,
             basketIdentifier = BASKET_IDENTIFIER,

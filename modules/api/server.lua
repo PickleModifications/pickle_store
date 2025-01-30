@@ -3,6 +3,14 @@ local AwaitingTransactions = {}
 local RedeemingUsers = {}
 local PerformingAction = {}
 
+function GenerateProductId()
+    local id = nil
+    repeat
+        id = "coin_" .. os.time() .. "_" .. math.random(1, 9999)
+    until not ProductInfo[id]
+    return id
+end
+
 function GetCommandReplaced(source, command, otherReplacements)
     local replacements = {
         ["{pts_server_id}"] = source,
@@ -154,6 +162,10 @@ function PurchaseProduct(source, productId, rawFields)
     if not product then return ShowNotification(source, _L("product_not_exist")) end
     if #product.commands < 1 then return ShowNotification(source, _L("no_action")) end
     if userInfo.coins < product.coins then return ShowNotification(source, _L("insufficient_coins", product.coins - userInfo.coins, tolower(Config.CoinCurrency.plural))) end
+    if product.userLimit > 0 then
+        local paymentCount = userInfo.purchases[productId] or 0
+        if paymentCount >= product.userLimit then return ShowNotification(source, _L("user_purchase_limit_reached")) end
+    end
     for i=1, #product.commands do
         local command = GetCustomCommand(product.commands[i], rawFields[i], {productId = productId, source = source})
         if command and command.purchaseCheckServer then
@@ -162,6 +174,18 @@ function PurchaseProduct(source, productId, rawFields)
         end
     end
     RemoveCoins(source, product.coins)
+    if product.userLimit > 0 then
+        userInfo.purchases[productId] = (userInfo.purchases[productId] or 0) + 1
+        UpdateUser(source)
+    end
+    if product.globalLimit > 0 then
+        product.globalLimit = product.globalLimit - 1
+        if product.globalLimit == 0 then
+            DeleteProduct(productId)
+        else
+            UpdateProduct(productId)
+        end
+    end
     for i=1, #product.commands do
         local command = GetCustomCommand(product.commands[i], rawFields[i], {productId = productId, source = source})
         if command then
@@ -170,12 +194,64 @@ function PurchaseProduct(source, productId, rawFields)
                 command.onPurchaseServer()
             end
         else
+            local commandString = GetCommandReplaced(source, product.commands[i], {productId = productId})
             print("Executing non-config coin command: " .. commandString)
-            ExecuteCommand(GetCommandReplaced(source, product.commands[i]))
+            ExecuteCommand(commandString)
         end
     end
     ShowNotification(source, _L("purchase_success", product.title, product.coins, tolower(product.coins == 1 and Config.CoinCurrency.singular or Config.CoinCurrency.plural)))
     TriggerClientEvent("pickle_tebexstore:purchaseProduct", source, productId, rawFields)
+end
+
+function UpdateUser(source)
+    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins, `purchases`=@purchases WHERE `identifier`=@identifier;", {
+        ["@purchases"] = json.encode(UserInfo[source].purchases),
+        ["@coins"] = UserInfo[source].coins,
+        ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
+    }, function(rowsChanged)
+        print("Updated user with " .. rowsChanged .. " rows changed.")
+    end)
+end
+
+function DeleteProduct(productId)
+    MySQL.Async.execute("DELETE FROM `pts_products` WHERE `id`=@id;", {["@id"] = productId}, function(rowsChanged)
+        print("Deleted product with " .. rowsChanged .. " rows changed.")
+    end)
+    ProductInfo[productId] = nil
+    TriggerClientEvent("pickle_tebexstore:updateProducts", -1, ProductInfo)
+end
+
+function UpdateProduct(productId)
+    MySQL.Async.execute("UPDATE `pts_products` SET `title`=@title, `description`=@description, `image`=@image, `coins`=@coins, `category`=@category, `globalLimit`=@globalLimit, `userLimit`=@userLimit, `commands`=@commands WHERE `id`=@id;", {
+        ["@id"] = productId,
+        ["@title"] = ProductInfo[productId].title,
+        ["@description"] = ProductInfo[productId].description,
+        ["@image"] = ProductInfo[productId].image,
+        ["@coins"] = ProductInfo[productId].coins,
+        ["@category"] = ProductInfo[productId].category,
+        ["@globalLimit"] = ProductInfo[productId].globalLimit,
+        ["@userLimit"] = ProductInfo[productId].userLimit,
+        ["@commands"] = json.encode(ProductInfo[productId].commands),
+    }, function(rowsChanged)
+        print("Updated product with " .. rowsChanged .. " rows changed.")
+    end)
+    TriggerClientEvent("pickle_tebexstore:updateProducts", -1, ProductInfo)
+end
+
+function GetProductInfo(product)
+    product.base_price = tonumber(product.base_price or "")
+    product.globalLimit = tonumber(product.globalLimit or "")
+    product.userLimit = tonumber(product.userLimit or "")
+    return {
+        title = product.name ~= "" and product.name or "Untitled Product",
+        description = product.description ~= "" and product.description or "No description provided.",
+        image = product.image or "",
+        coins = (product.base_price and product.base_price > 0) and product.base_price or 0,
+        category = product.category or "all",
+        globalLimit = (product.globalLimit and product.globalLimit > 0) and product.globalLimit or 0,
+        userLimit = (product.userLimit and product.userLimit > 0) and product.userLimit or 0,
+        commands = product.commands or {}
+    }
 end
 
 RegisterNetEvent("pickle_tebexstore:purchaseProduct", function(productId, rawFields) 
@@ -188,24 +264,34 @@ end)
 
 RegisterNetEvent("pickle_tebexstore:updateProduct", function(id, product)
     if not ProductInfo[id or ""] then return end
-    ProductInfo[id] = {
-        title = product.name,
-        description = product.description,
-        image = product.image,
-        coins = product.base_price,
-        category = product.category,
-        commands = product.commands,
-    }
-    MySQL.Async.execute("UPDATE `pts_products` SET `title`=@title, `description`=@description, `image`=@image, `coins`=@coins, `category`=@category, `commands`=@commands WHERE `id`=@id;", {
+    ProductInfo[id] = GetProductInfo(product)
+    UpdateProduct(id)
+end)
+
+RegisterNetEvent("pickle_tebexstore:deleteProduct", function(productId)
+    if not ProductInfo[productId] then return end
+    DeleteProduct(productId)
+end)
+
+RegisterNetEvent("pickle_tebexstore:createProduct", function(product)
+    local id = GenerateProductId()
+    if ProductInfo[id] then return end
+    product.base_price = tonumber(product.base_price or "")
+    product.globalLimit = tonumber(product.globalLimit or "")
+    product.userLimit = tonumber(product.userLimit or "")
+    ProductInfo[id] = GetProductInfo(product)
+    MySQL.Async.execute("INSERT INTO `pts_products` (`id`, `title`, `description`, `image`, `coins`, `category`, `globalLimit`, `userLimit`, `commands`) VALUES (@id, @title, @description, @image, @coins, @category, @globalLimit, @userLimit, @commands);", {
         ["@id"] = id,
         ["@title"] = ProductInfo[id].title,
         ["@description"] = ProductInfo[id].description,
         ["@image"] = ProductInfo[id].image,
         ["@coins"] = ProductInfo[id].coins,
         ["@category"] = ProductInfo[id].category,
+        ["@globalLimit"] = ProductInfo[id].globalLimit,
+        ["@userLimit"] = ProductInfo[id].userLimit,
         ["@commands"] = json.encode(ProductInfo[id].commands),
     }, function(rowsChanged)
-        print("Updated product with " .. rowsChanged .. " rows changed.")
+        print("Created product with " .. rowsChanged .. " rows changed.")
     end)
     TriggerClientEvent("pickle_tebexstore:updateProducts", -1, ProductInfo)
 end)
@@ -353,7 +439,7 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function()
             end)
         end
         data.coins = rows[1].coins
-
+        data.purchases = json.decode(rows[1].purchases) or {}
         if data.username_id then
             return GetFiveMUsername(data.username_id, function(username)
                 data.username = username
@@ -381,10 +467,10 @@ MySQL.ready(function()
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_redeemed_transactions` (`id` INT PRIMARY KEY AUTO_INCREMENT, `transaction_id` VARCHAR(255), `identifiers` LONGTEXT)", {}, function(rowsChanged)
         if rowsChanged > 0 then print("Created table `pts_redeemed_transactions` with " .. rowsChanged .. " rows changed.") end
     end)
-    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`identifier` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT)", {}, function(rowsChanged)
+    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`identifier` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT, `purchases` LONGTEXT)", {}, function(rowsChanged)
         if rowsChanged > 0 then print("Created table `pts_users` with " .. rowsChanged .. " rows changed.") end
     end)
-    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_products` ( `id` VARCHAR(255) PRIMARY KEY, `title` varchar(255) NOT NULL, `description` longtext NOT NULL, `image` longtext NOT NULL, `coins` int(11) NOT NULL DEFAULT 0, `packageId` int(11) DEFAULT NULL, `category` longtext DEFAULT NULL, `commands` longtext DEFAULT NULL, PRIMARY KEY (`id`) )", {}, function(rowsChanged)
+    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_products` ( `id` VARCHAR(255) PRIMARY KEY, `title` varchar(255) NOT NULL, `description` longtext NOT NULL, `image` longtext NOT NULL, `coins` int(11) NOT NULL DEFAULT 0, `packageId` int(11) DEFAULT NULL, `globalLimit` int(11) DEFAULT 0, `userLimit` int(11) DEFAULT 0, `category` longtext DEFAULT NULL, `commands` longtext DEFAULT NULL )", {}, function(rowsChanged)
         if rowsChanged > 0 then print("Created table `pts_products` with " .. rowsChanged .. " rows changed.") end
         MySQL.Async.fetchAll("SELECT * FROM `pts_products`;", {}, function(rows)
             for i=1, #rows do
@@ -395,6 +481,8 @@ MySQL.ready(function()
                     image = rows[i].image,
                     coins = rows[i].coins,
                     category = rows[i].category,
+                    globalLimit = rows[i].globalLimit,
+                    userLimit = rows[i].userLimit,
                     commands = json.decode(rows[i].commands) or {},
                 }
             end

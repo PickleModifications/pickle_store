@@ -82,6 +82,7 @@ export async function getProducts(id: string, tebexApiKey: string) {
                 discount: tbxPackage.discount,
                 currency: tbxPackage.currency,
                 groups: groups || [],
+                commands: tbxPackage.commands,
             });
         }
     }
@@ -118,14 +119,8 @@ export async function getApiUser(id: string, tebexApiKey: string, skipProducts?:
   }
 }
  
-export async function ensureCart(id: string | null | undefined, tebexApiKey: string) {
+export async function ensureCart(tebexApiKey: string) {
   let user: User | null = null;
-  if (id) {
-    const foundUser = await getApiUser(id, tebexApiKey);
-    if (foundUser && foundUser.id && !foundUser.complete) {
-      user = foundUser;
-    }
-  }
   if (!user) {
     const req = await fetch('https://headless.tebex.io/api/accounts/'+tebexApiKey+'/baskets', {
       method: 'POST',

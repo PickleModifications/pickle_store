@@ -12,4 +12,5 @@ Language["en"] = {
     insufficient_coins = "You need %s more %s to purchase this product.",
     cancel_command_failed = "The purchase cannot be completed as the command failed to execute: %s",
     purchase_success = "You have successfully purchased %s for %s %s.",
+    user_purchase_limit_reached = "You have reached the purchase limit for this product.",
 }

@@ -14,7 +14,7 @@ const LoadingOverlay: React.FC = () => {
     }, [isLoading]);
 
     return loading && (
-        <div style={{opacity: isLoading ? 0.9 : 0.0}} className="fixed inset-0 flex items-center justify-center bg-zinc-950 z-[100] transition-opacity duration-300">            
+        <div style={{opacity: isLoading ? 0.9 : 0.0}} className="fixed inset-0 flex items-center justify-center bg-background z-[100] transition-opacity duration-300">            
             <LoaderCircle className="animate-spin" />
         </div>
     );

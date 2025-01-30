@@ -2,6 +2,8 @@ Config = {}
 
 Config.Language = "en"
 
+Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
+
 Config.TebexStoreUrl = "https://unitingkingdomsrp.co.uk/" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
 
 Config.TebexApiKey = "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc" -- Your Tebex API key (NOT YOUR SECRET KEY, that's set on sv_tebexSecret in the server CFG). This is required for the store to function.
@@ -57,7 +59,7 @@ Config.Advertisements = {
 Config.CustomCommands = {
     ["pts_givecar"] = {
         label = "Give Car", -- This will display on top of the purchase button if fields are required.
-        format = "{model}", -- This is the format of the command parameters that added to a coin product. {model} in this case would support pts_givecar adder as an example.
+        commandParameters = "{model}", -- This is the format of the command parameters that added to a coin product. {model} in this case would support pts_givecar adder as an example.
         fields = {
             {variable = "plate", label = "Plate Text", placeholder = "PICKLE"},
         },
@@ -76,26 +78,20 @@ Config.CustomCommands = {
             local source = fields.source
             local plate = fields.plate
             local model = fields.model
-            AddOwnedVehicle(source, plate, model)
+            AddOwnedVehicle(tonumber(source), plate, model)
         end,
     },
     ["pts_giveitem"] = {
-        purchaseCheckServer = function(args)
-            if #args < 3 then return print("ERROR EXECUTING COIN COMMAND (pts_giveitem): Not enough arguments.") end
-            local source = args[1]
-            local item = args[2]
-            local amount = tonumber(args[3]) or 1
-            local metadata = json.encode(args[4] or {}) or {}
-            return Inventory.CanCarryItem(source, item, amount), "You do not have enough inventory space to purchase this item."
+        label = "Give Item", -- This will display on top of the purchase button if fields are required.
+        commandParameters = "{name} {count}", -- These are the parameters' variable names in-order of being typed in the command box for the product. (e.g. pts_givecar adder red would need this set to "{model} {red}").
+        purchaseCheckServer = function(fields)
+            if not fields.source or not tonumber(fields.source) then return false, "Invalid source." end
+            if not fields.name or fields.name == "" then return false, "Invalid item name." end
+            if not fields.count or fields.count == "" or not tonumber(fields.count) then return false, "Invalid item count." end
+            return Inventory.CanCarryItem(tonumber(fields.source), fields.name, tonumber(fields.count)), "You do not have enough inventory space to purchase this item."
         end,
-        onPurchaseServer = function(args)
-            if #args < 3 then return print("ERROR EXECUTING COIN COMMAND (pts_giveitem): Not enough arguments.") end
-            local source = args[1]
-            local item = args[2]
-            local amount = tonumber(args[3]) or 1
-            local metadata = json.encode(args[4] or {}) or {}
-            Inventory.AddItem(source, item, amount, metadata)
-            ShowNotification(source, "You have received " .. amount .. "x " .. item .. ".")
+        onPurchaseServer = function(fields)
+            Inventory.AddItem(tonumber(fields.source), fields.name, tonumber(fields.count))
         end,
     },
 }
