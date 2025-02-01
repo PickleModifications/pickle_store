@@ -45,8 +45,11 @@ export type Config = {
     username: string;
     customPages: CustomPage[];
     image: string;
+    spins: number | undefined | null;
+    nextSpinTime: number | undefined | null;
     coins: number | undefined | null;
     coinCurrency: CoinCurrency | undefined | null;
+    hiddenProducts: string[];
     permissions: {
         manageProducts: boolean;
     },
@@ -81,9 +84,12 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         username_id: -1, 
         discord_id: -1, 
         username: "UNKNOWN_USER",
+        hiddenProducts: [],
         customPages: [],
         image: "",
         coins: 0,
+        spins: 0,
+        nextSpinTime: 0,
         coinCurrency: undefined,
         permissions: {
             manageProducts: false
@@ -102,6 +108,7 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         });
     });
     useNuiEvent("setConfig", function(data) {
+        console.log(data.config.spins)
         setConfig(data.config);
     });
 

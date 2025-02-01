@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useLoading } from "@/providers/loading"
 import { useNuiEvent } from "@/providers/nui/useNui"
 import { fetchNui } from "@/providers/nui/fetchNui"
+import Wheel from "../wheel/Wheel"
 
 
 export type AccountType = {
@@ -71,7 +72,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                 <Dialog>
                   <DialogTrigger className="flex items-stretch">
                     <div className="flex gap-0 items-center cursor-pointer hover:scale-105 transition ease-in-out duration-200">
-                      <div style={{borderRadius: "5px 0px 0px 5px"}} className="flex items-center gap-1 bg-secondary p-5 px-2 py-1">
+                      <div style={{borderRadius: "5px 0px 0px 5px"}} className="flex items-center gap-1 bg-secondary p-5 px-2 py-1 h-full">
                         <img className="h-5 w-5 rounded-md" src={configState.coinCurrency.image} alt=""/>
                         <div className="font-semibold">{userState.coins?.toLocaleString() || "0"}</div>
                       </div>
@@ -103,7 +104,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                             return product ? (
                               <div key={index} className="flex gap-2 justify-between items-center p-2 border rounded-md">
                                 <img className="h-10 w-10 rounded-md" src={configState.coinCurrency?.image} alt=""/>
-                                <div className="w-full">{product.name}</div>
+                                <div className="w-full whitespace-nowrap">{product.name}</div>
                                 {
                                   product.productOptions.map((option: ProductOption) => (
                                     <Button key={option.id} className="w-full" variant="secondary" onClick={() => {
@@ -150,6 +151,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                 </Dialog>
 
               )}
+              <Wheel/>
               <Dialog open={showRedeem} onOpenChange={(open) => {
                 setShowRedeem(open)
                 if (!open) {
@@ -157,9 +159,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                 }
               }}>
                 <DialogTrigger>
-                  <div className="flex items-center gap-1 bg-secondary rounded-md p-5 px-2 py-1 cursor-pointer hover:scale-105 transition ease-in-out duration-200">
-                    <div className="font-semibold">Redeem</div>
-                  </div>
+                  <Button variant="secondary">Redeem</Button>
                 </DialogTrigger>
                 <DialogContent>
                 <DialogHeader>

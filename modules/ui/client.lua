@@ -12,6 +12,17 @@ function GetCustomCommandsJS()
     return customCommands
 end
 
+function GetHiddenProducts()
+    local hiddenPackages = {}
+    for i=1, #Config.HiddenPackages do
+        hiddenPackages[i] = tostring(Config.HiddenPackages[i])
+    end
+    for i=1, #Config.CoinCurrency.packages do
+        hiddenPackages[#hiddenPackages+1] = tostring(Config.CoinCurrency.packages[i])
+    end
+    return hiddenPackages
+end
+
 RegisterNUICallback("requestConfig", function(data, cb)
     TriggerServerEvent("pickle_tebexstore:requestInfo")
 end)
@@ -109,12 +120,14 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function(data)
             customPages = Config.CustomPages,
             image = "images/logo.png",
             coins = LOCAL_DATA.coins,
+            spins = 1,
             permissions = {
                 manageProducts = true
             },
             coinCurrency = Config.CoinCurrency,
             productInfo = GetProductInfoArray(),
             customCommands = GetCustomCommandsJS(),
+            hiddenProducts = GetHiddenProducts(),
         }
     })
 end)

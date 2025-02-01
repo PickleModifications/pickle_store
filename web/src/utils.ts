@@ -1,4 +1,4 @@
-import { User } from "@/components/cart/Cart";
+import { User } from "@/providers/user";
 import { Product } from "@/components/product/Product";
 import { ProductOption } from "@/components/product/Product";
 export let products: Product[] = [];

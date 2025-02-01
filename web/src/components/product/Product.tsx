@@ -491,6 +491,12 @@ export function ProductCard({ product }: { product: Product }) {
     );
 }
 
+function isProductHidden(productId: number | string, hiddenProducts: string[]) {
+    console.log(hiddenProducts)
+    if (!hiddenProducts) { return false }
+    return hiddenProducts.includes(productId.toString());
+}
+
 function getProductCategory(productId: number | string, categories: { [key: string]: { label: string, products: Product[] } }) {
     for (const category in categories) {
         if (category != "all" && categories[category].products.find((product) => product.id === productId)) {
@@ -509,46 +515,50 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
     if (userState && userState.products) {
         for (const configProduct of configState.productInfo || []) {
             let targetCategory = "all";
-            if (configProduct.category) {
-                targetCategory = configProduct.category;
-                if (!categories[configProduct.category]) {
-                    categories[configProduct.category] = {label: configProduct.category, products: []};
-                    categoriesOrder.push(configProduct.category);
+            if (!isProductHidden(configProduct.id, configState.hiddenProducts)) {
+                if (configProduct.category) {
+                    targetCategory = configProduct.category;
+                    if (!categories[configProduct.category]) {
+                        categories[configProduct.category] = {label: configProduct.category, products: []};
+                        categoriesOrder.push(configProduct.category);
+                    }
                 }
-            }
-            if (configProduct.id.toString().startsWith("coin") && !configProduct.packageId && categories[targetCategory]) {
-                const productData = {
-                    id: configProduct.id,
-                    globalLimit: configProduct.globalLimit || 0,
-                    userLimit: configProduct.userLimit || 0,
-                    isCoinPackage: true,
-                    type: "single",
-                    name: configProduct.title,
-                    base_price: configProduct.coins,
-                    productOptions: [],
-                    description: configProduct.description,
-                    image: configProduct.image,
-                    discount: 0,
-                    currency: "USD",
-                    groups: [],
-                    commands:configProduct.commands || [],
-                }
-                categories[targetCategory].products.push(productData);
-                if (targetCategory != "all") {
-                    categories["all"].products.push(productData);
+                if (configProduct.id.toString().startsWith("coin") && categories[targetCategory]) {
+                    const productData = {
+                        id: configProduct.id,
+                        globalLimit: configProduct.globalLimit || 0,
+                        userLimit: configProduct.userLimit || 0,
+                        isCoinPackage: true,
+                        type: "single",
+                        name: configProduct.title,
+                        base_price: configProduct.coins,
+                        productOptions: [],
+                        description: configProduct.description,
+                        image: configProduct.image,
+                        discount: 0,
+                        currency: "USD",
+                        groups: [],
+                        commands:configProduct.commands || [],
+                    }
+                    categories[targetCategory].products.push(productData);
+                    if (targetCategory != "all") {
+                        categories["all"].products.push(productData);
+                    }
                 }
             }
         }
         for (const product of userState.products) {
             const productId = product.id;
-            for (const configProduct of configState.productInfo || []) {
-                if (configProduct.id == productId) {
-                    if (configProduct.category) {
-                        categories[configProduct.category].products.push(product);
+            if (!isProductHidden(productId, configState.hiddenProducts)) { 
+                for (const configProduct of configState.productInfo || []) {
+                    if (configProduct.id == productId) {
+                        if (configProduct.category) {
+                            categories[configProduct.category].products.push(product);
+                        }
                     }
                 }
+                categories["all"].products.push(product);
             }
-            categories["all"].products.push(product);
         }
     }
     return { categories, categoriesOrder };

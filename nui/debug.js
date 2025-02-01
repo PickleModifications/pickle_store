@@ -1,14 +1,15 @@
-const DEBUG_MODE = false;
+let loaded = false;
 
 function RunDebugEvents() {
     window.postMessage({
         type: "setConfig",
         config: {
             theme: "midnight",
-            tebexApiKey: "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc",
+            tebexApiKey: "qtt5-df22b144597b28245dc950be6324f09c83e6db02",
             image: "nui/src/assets/logo.png",
             customPages: [],
             coins: 25,
+            spins: 1,
             coinCurrency: {
                 plural: "Coins",
                 singular: "Coin",
@@ -71,13 +72,18 @@ document.addEventListener('DOMContentLoaded', (event) => {
         },
         body: JSON.stringify({})
     }).then((response) => {
+        if (loaded) return;
+        loaded = true;
         response.json().then((data) => {
             console.log('Sending config data to NUI', data);
             window.postMessage(data, '*');
         });
-    });
-    if (!DEBUG_MODE) return;
-    setTimeout(() => {
-        RunDebugEvents();
-    }, 100);
+    }).catch((error) => {
+        if (loaded) return;
+        loaded = true;
+        if (error) {
+            console.error('Error fetching config data', error);
+            RunDebugEvents();
+        }
+    })
 });

@@ -17,6 +17,8 @@ export type User = {
       username: string;
   };
   coins: number;
+  spins: number;
+  nextSpinTime: number;
   products: Product[];
 }
 
@@ -38,30 +40,37 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);    
     const [configState, setConfigState] = useState(config);
     const [coins, setCoins] = useState(0);
+    const [spins, setSpins] = useState(0);
     const [basket, setBasket] = useState<BasketUser | null>(null);
     useEffect(() => {
       if (user) {
-        setUser({...user, coins: coins});
+        setUser({...user, coins: coins, spins: spins});
       }
-    }, [coins]);
+    }, [coins, spins]);
     useNuiEvent('updatePlayerCoins', (data) => {
       setCoins(data.coins);
+    });
+    useNuiEvent('updatePlayerSpins', (data) => {
+      setSpins(data.spins);
     });
     useEffect(() => { 
       setConfigState(config) 
       if (basket == null && config.tebexApiKey !== "UNDEFINED") {
         const fetchData = async () => {
           const cart = await ensureCart(config.tebexApiKey);
-          console.log(cart);
           setBasket(cart)
-          setUser({
-            ident: cart.ident,
-            products: cart.products || await getProducts(cart.ident, config.tebexApiKey),
-            username: user?.username || '',
-            username_id: user?.username_id || 0,
-            discord: user?.discord || { id: '', username: '' },
-            coins: user?.coins || (config.coins || 0)
-          })
+          if (cart) {
+            setUser({
+              ident: cart.ident,
+              products: cart.products || await getProducts(cart.ident, config.tebexApiKey),
+              username: user?.username || '',
+              username_id: user?.username_id || 0,
+              discord: user?.discord || { id: '', username: '' },
+              coins: user?.coins || (config.coins || 0),
+              spins: user?.spins || (config.spins || 0),
+              nextSpinTime: user?.nextSpinTime || (config.nextSpinTime || 0),
+            })
+          }
         };
         fetchData();
       }
