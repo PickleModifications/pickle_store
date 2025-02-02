@@ -8,75 +8,40 @@ import 'react-roulette-pro/dist/index.css';
 import tickSound from '/sounds/tick.mp3';
 import wheelIcon from '/images/wheel.png';
 import { useUser } from '@/providers/user';
+import { useConfig } from '@/providers/config';
+import { useNuiEvent } from '@/providers/nui/useNui';
+import { fetchNui } from '@/providers/nui/fetchNui';
 
 export default () => {
     const { user, setUser } = useUser();
+    const { config } = useConfig();
     const [userState, setUserState] = useState(user);
+    const [configState, setConfigState] = useState(config);
     useEffect(() => { setUserState(user) }, [user]);
+    useEffect(() => { setConfigState(config) }, [config]);
     const [prizeWon, setPrizeWon] = useState<number | null>(null);
     const [spinDone, setSpinDone] = useState(false);
     const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
-    const spins = 50 || (userState?.spins || 0);
+    let spins = (userState?.spins || 0);
+    console.log("CURRENT SPINS: ", spins);
     const nextSpinTime = (userState?.nextSpinTime || 0);
+    if (spins < 1 && currentTime >= nextSpinTime) {
+        spins = 1;
+    }
     const isSpinning = (typeof prizeWon === 'number');
-    const audio = new Audio(tickSound);
-    const prizeSize = 205;
+    const prizeSize = 150;
     const prizeItemWidth = prizeSize;
     const prizeItemHeight = prizeSize;
     const minimumPrizesInAnimation = 50;
     const prizeList: any = [];
-    const prizes = [
-        {
-            "id": 0,
-            "image": "https://docs.fivem.net/vehicles/adder.webp",
-            "text": "Adder"
-        },
-        {
-            "id": 1,
-            "image": "https://docs.fivem.net/vehicles/akuma.webp",
-            "text": "Akuma"
-        },
-        {
-            "id": 2,
-            "image": "https://docs.fivem.net/vehicles/asea.webp",
-            "text": "Asea"
-        },
-        {
-            "id": 3,
-            "image": "https://docs.fivem.net/vehicles/asea2.webp",
-            "text": "Asea2"
-        },
-        {
-            "id": 4,
-            "image": "https://docs.fivem.net/vehicles/asterope.webp",
-            "text": "Asterope"
-        },
-        {
-            "id": 5,
-            "image": "https://docs.fivem.net/vehicles/baller.webp",
-            "text": "Baller"
-        },
-        {
-            "id": 6,
-            "image": "https://docs.fivem.net/vehicles/baller2.webp",
-            "text": "Baller2"
-        },
-        {
-            "id": 7,
-            "image": "https://docs.fivem.net/vehicles/banshee.webp",
-            "text": "Banshee"
-        },
-        {
-            "id": 8,
-            "image": "https://docs.fivem.net/vehicles/banshee2.webp",
-            "text": "Banshee2"
-        },
-        {
-            "id": 9,
-            "image": "https://docs.fivem.net/vehicles/bati.webp",
-            "text": "Bati"
-        },
-    ];
+    const prizes = configState?.wheelPrizes || [];
+    useNuiEvent("spinWheel", (data) => {
+        setPrizeWon(data.prizeId - 1);
+        if (userState) {
+            setUser({...userState, spins: data.spins || 0, nextSpinTime: data.nextSpinTime || 0});
+        }
+    });
+    if (!prizes || prizes.length < 1) return null;
     let decoyPrizes = 0;
     let prizeIndex = 0;
     useEffect(() => {
@@ -86,28 +51,6 @@ export default () => {
 
         return () => clearInterval(interval);
     }, []);
-    useEffect(() => {
-        const ticker = document.getElementById('roulette-ticker');
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (isSpinning && entry.isIntersecting) {
-                        audio.volume = 0.5;
-                        audio.currentTime = 0;
-                        audio.play();
-                    }
-                });
-            },
-            { threshold: 0.5 }
-        );
-
-        const items = document.querySelectorAll('.roulette-item-bounds');
-        items.forEach((item) => observer.observe(item));
-
-        return () => {
-            items.forEach((item) => observer.unobserve(item));
-        };
-    });
     while (prizeList.length < minimumPrizesInAnimation || prizeList.length < prizes.length * 2) {
         prizes.map((prize) => {
             prizeList.push({
@@ -158,13 +101,14 @@ export default () => {
                                     prizeIndex={prizeIndex}
                                     spinningTime={5}
                                     options={{stopInCenter: true}}
+                                    soundWhileSpinning={tickSound}
                                     designPlugin={() => ({
                                         prizeItemWidth: prizeItemWidth,
                                         prizeItemHeight: prizeItemHeight,
                                         prizeItemRenderFunction: (item) => (
-                                            <div style={{borderRight: "2px solid hsl(var(--card))", borderLeft: "2px solid hsl(var(--card))", width: prizeItemWidth, height: prizeItemHeight}} className='relative bg-secondary flex flex-col items-center justify-center roulette-item-bounds'>
+                                            <div style={{borderRight: "2px solid hsl(var(--card))", borderLeft: "2px solid hsl(var(--card))", width: prizeItemWidth, height: prizeItemHeight}} className={'relative bg-secondary flex flex-col items-center justify-center roulette-item-bounds prize-' + item.id}>
                                                 <img src={item.image} alt={item.text} style={{width: prizeItemWidth * 0.8}} draggable="false"/>
-                                                <div style={{bottom: 0, width: "100%", height: 50, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: "linear-gradient(to top, hsl(var(--background)) 0%, transparent 100%)"}} className='absolute px-2'>
+                                                <div style={{bottom: 0, width: "100%", height: 50, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", background: "linear-gradient(to top, hsl(var(--background)) 0%, transparent 100%)"}} className='absolute px-2 pb-2 flex items-end justify-center'>
                                                     <div className='text-center'>{item.text}</div>
                                                 </div>
                                             </div>
@@ -181,10 +125,7 @@ export default () => {
                             )}
                         </div>
                         <Button disabled={isSpinning || spins < 1} variant={"secondary"} onClick={() => {
-                            setPrizeWon(4)
-                            if (userState) {
-                                setUser({...userState, spins: spins - 1, nextSpinTime: currentTime + 86400});
-                            }
+                            fetchNui("spinWheel", {});
                         }}>{isSpinning ? <div>Spinning...</div> : (spins <= 0 ? ((currentTime > nextSpinTime) ? ("No Spins") : (
                                 `Reset: ${String(Math.floor((nextSpinTime - currentTime) / 3600)).padStart(2, '0')}:${String(Math.floor(((nextSpinTime - currentTime) % 3600) / 60)).padStart(2, '0')}:${String(((nextSpinTime - currentTime) % 3600) % 60).padStart(2, '0')}`
                             )) : (`Free Spins (x${spins})`))}</Button>

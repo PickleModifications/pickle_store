@@ -4,9 +4,9 @@ Config.Language = "en"
 
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
 
-Config.TebexStoreUrl = "https://doubleback-rp.tebex.io/" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
+Config.TebexStoreUrl = "https://unitingkingdomsrp.co.uk/" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
 
-Config.TebexApiKey = "qtt5-df22b144597b28245dc950be6324f09c83e6db02" -- Your Tebex API key (NOT YOUR SECRET KEY, that's set on sv_tebexSecret in the server CFG). This is required for the store to function.
+Config.TebexApiKey = "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc" -- Your Tebex API key (NOT YOUR SECRET KEY, that's set on sv_tebexSecret in the server CFG). This is required for the store to function.
 
 Config.IdentifierPrefix = "license" -- Don't change this unless you are alright with all existing coin accounts being reset.
 
@@ -14,20 +14,92 @@ Config.RequireDiscordIdentifier = true -- If true, the webstore will be non-inte
 
 Config.RequireFiveMIdentifier = true -- If true, the webstore will be non-interactable unless the user has a FiveM identifier. They will be instructed on this and how to fix it.
 
-Config.HeadlessTebexStore = false -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
+Config.HeadlessTebexStore = true -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
 
-Config.HiddenPackages = {}
+Config.InsertDefaultProducts = true -- If true, the default products will be inserted into the database on startup.
+
+Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.
+
+Config.StoreManagers = { -- These are the people that can manage the store and see the hidden products.
+    "discord:988962709691314276",
+    "steam:EXAMPLE",
+    "license:EXAMPLE",
+    "fivem:EXAMPLE",
+    "discord:EXAMPLE",
+}
+
+Config.HiddenPackages = {
+    --6661855,
+    --6661856,
+    --6661857,
+    --6661858,
+    --6661859,
+}
 
 Config.CoinCurrency = {
-    singular = "Coin",
-    plural = "Coins",
-    image = "https://dunb17ur4ymx4.cloudfront.net/packages/images/1fa9ed7ca58b4800414b49a2cd5e8de6793ae852.png",
+    singular = "Diamond",
+    plural = "Diamonds",
+    image = "images/diamonds.png",
     packages = {
-        6661597,
-        6661598,
-        6661600,
-        6661602,
-        6661604
+        6661855,
+        6661856,
+        6661857,
+        6661858,
+        6661859,
+    }
+}
+
+Config.DailySpin = {
+    cooldown = 86400, -- 24 hours in seconds.
+    prizes = { -- Make sure the chances add up to 100%
+        {
+            text = "100 Diamonds", 
+            commands = { 
+                {"pts_givecoins 100", {}} 
+            }, 
+            image = Config.CoinCurrency.image, 
+            chance = 1 -- 1% chance.
+        },
+        {
+            text = "Adder", 
+            commands = { 
+                {"pts_givecar adder", {}} 
+            }, 
+            image = "https://docs.fivem.net/vehicles/adder.webp", 
+            chance = 5 -- 5% chance.
+        },
+        {
+            text = "Pistol", 
+            commands = { 
+                {"pts_giveitem weapon_pistol 1", {}}
+            }, 
+            image = Config.ItemImageFolder .. "/weapon_pistol.png", 
+            chance = 14 -- 14% chance.
+        },
+        {
+            text = "x10 Soda", 
+            commands = { 
+                {"pts_giveitem soda 10", {}}
+            }, 
+            image = Config.ItemImageFolder .. "/soda.png", 
+            chance = 25  -- 25% chance.
+        },
+        {
+            text = "x10 Burger", 
+            commands = { 
+                {"pts_giveitem burger 10", {}}
+            }, 
+            image = Config.ItemImageFolder .. "/burger.png", 
+            chance = 25 -- 25% chance.
+        },
+        {
+            text = "x10 Water", 
+            commands = { 
+                {"pts_giveitem water 10", {}}
+            }, 
+            image = Config.ItemImageFolder .. "/water.png", 
+            chance = 25 -- 25% chance.
+        },
     }
 }
 
@@ -55,12 +127,51 @@ Config.CustomPages = {
 
 Config.Advertisements = {
     {
-        cron = "*/5 * * * *",
-        message = "Need more coins? Visit the shop by doing /shop in the chat."
+        interval = "*/5 * * * *", -- See more about cron format at: https://crontab.guru/
+        message = "Need more coins? Visit the store by doing /store in the chat."
     },
 }
 
 Config.CustomCommands = {
+    ["pts_plate"] = {
+        label = "Change Plate", -- This will display on top of the purchase button if fields are required.
+        commandParameters = "", -- This is the format of the command parameters that added to a coin product. {model} in this case would support pts_givecar adder as an example.
+        fields = {
+            {variable = "plate", label = "Plate Text", placeholder = "PICKLE"},
+        },
+        purchaseCheckClient = function(fields)
+            local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+            if not vehicle or not IsEntityAVehicle(vehicle) then return false, "You are not in a vehicle." end
+            local plate = GetVehicleNumberPlateText(vehicle)
+            plate = plate:match("^%s*(.-)%s*$")
+            if plate == nil or plate == "" then return false, "This vehicle does not have a plate." end 
+            if not vehicle or not IsEntityAVehicle(vehicle) then return false, "You are not in a vehicle." end
+            if not fields.plate or fields.plate == "" or string.len(fields.plate) > 8 then return false, "Invalid plate text, make sure it's under 8 characters." end
+            if fields.plate == plate then return false, "This plate is already on your vehicle." end
+            return true, "success", {currentPlate = plate}
+        end,
+        purchaseCheckServer = function(fields)
+            print(json.encode(fields))
+            if not fields.plate or fields.plate == "" or string.len(fields.plate) > 8 then return false, "Invalid plate text, make sure it's under 8 characters." end
+            if not fields.source then return false, "Invalid fields for pts_plate." end
+            local result = GetOwnedVehicleFromPlate(fields.plate)
+            if result then return false, "This plate is already in use." end
+            local result = GetOwnedVehicleFromPlate(fields.currentPlate)
+            if not result or result.owner ~= GetIdentifier(tonumber(fields.source)) then return false, "This vehicle is not yours." end
+            return true
+        end,
+        onPurchaseServer = function(fields)
+            local source = fields.source
+            local plate = fields.plate
+            UpdateVehiclePlate(tonumber(source), fields.currentPlate, plate)
+            ShowNotification(tonumber(source), "You have updated your vehicle's plate to " .. plate .. "!")
+        end,
+        onPurchaseClient = function(fields)
+            local source = fields.source
+            local plate = fields.plate
+            SetVehicleNumberPlateText(GetVehiclePedIsIn(PlayerPedId(), false), plate)
+        end,
+    },
     ["pts_givecar_plate"] = {
         label = "Give Car", -- This will display on top of the purchase button if fields are required.
         commandParameters = "{model}", -- This is the format of the command parameters that added to a coin product. {model} in this case would support pts_givecar adder as an example.
@@ -73,7 +184,7 @@ Config.CustomCommands = {
         end,
         purchaseCheckServer = function(fields)
             if not fields.plate or fields.plate == "" or string.len(fields.plate) > 8 then return false, "Invalid plate text, make sure it's under 8 characters." end
-            if not fields.source or not fields.model then return false, "Invalid fields for pts_givecar." end
+            if not fields.source or not fields.model then return false, "Invalid fields for pts_givecar_plate." end
             local result = GetOwnedVehicleFromPlate(fields.plate)
             if result then return false, "This plate is already in use." end
             return true
@@ -82,6 +193,7 @@ Config.CustomCommands = {
             local source = fields.source
             local plate = fields.plate
             local model = fields.model
+            ShowNotification(tonumber(source), "You have received a vehicle in your garage with the plate " .. plate .. "!")
             AddOwnedVehicle(tonumber(source), plate, model)
         end,
     },
@@ -100,16 +212,17 @@ Config.CustomCommands = {
         onPurchaseServer = function(fields)
             local source = fields.source
             local plate = ""
-            local letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            local numbers = "0123456789"
+            local letters = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
+            local numbers = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
             for i = 1, 3 do
-                plate = plate .. letters:sub(math.random(1, #letters), math.random(1, #letters))
+                plate = plate .. letters[math.random(1, #letters)]
             end
             plate = plate .. " "
             for i = 1, 3 do
-                plate = plate .. numbers:sub(math.random(1, #numbers), math.random(1, #numbers))
+                plate = plate .. numbers[math.random(1, #numbers)]
             end
             local model = fields.model
+            ShowNotification(tonumber(source), "You have received a vehicle in your garage with the plate " .. plate .. "!")
             AddOwnedVehicle(tonumber(source), plate, model)
         end,
     },
@@ -123,7 +236,55 @@ Config.CustomCommands = {
             return Inventory.CanCarryItem(tonumber(fields.source), fields.name, tonumber(fields.count)), "You do not have enough inventory space to purchase this item."
         end,
         onPurchaseServer = function(fields)
+            ShowNotification(tonumber(fields.source), "You have received x" .. fields.count .. " " .. GetItemLabel(fields.name) .. "!")
             Inventory.AddItem(tonumber(fields.source), fields.name, tonumber(fields.count))
+        end,
+    },
+    ["pts_givecoins"] = {
+        label = "Add Coins", -- This will display on top of the purchase button if fields are required.
+        commandParameters = "{count}", -- These are the parameters' variable names in-order of being typed in the command box for the product. (e.g. pts_givecar adder red would need this set to "{model} {red}").
+        onPurchaseServer = function(fields)
+            ShowNotification(tonumber(fields.source), "You have received " .. fields.count .. " " .. Config.CoinCurrency.plural .. "!")
+            AddCoins(tonumber(fields.source), tonumber(fields.count))
+        end,
+        -- tebexCommand is needed to purchase coins.
+        tebexCommand = function(args, raw)
+            local transactionId = args[1]
+            local fivemId = args[2]
+            if tonumber(args[1]) then 
+                -- Give to player directly.
+                local target = tonumber(args[1])
+                local credit = tonumber(args[2])
+                if not target or not credit then print("Invalid args for pts_givecoins (game):", target, credit) return end
+                AddCoins(target, credit)
+                ShowNotification(target, "You have received " .. fields.count .. " " .. Config.CoinCurrency.plural .. "!")
+            else
+                if not transactionId or tonumber(transactionId) then return end
+                -- Give to player offline.
+                local transactionId = args[1]
+                local usernameId = tonumber(args[2]) or nil
+                local credit = tonumber(args[3])
+                if not transactionId or not credit then print("Invalid args for pts_givecoins (tebex):", transactionId, credit) return end
+                local redeemCommand = "pts_givecoins {pts_server_id} " .. credit
+                ProcessTebexCommand(transactionId, usernameId, redeemCommand)
+            end
+        end
+    },
+    ["pts_setjob"] = {
+        label = "Set Job", -- This will display on top of the purchase button if fields are required.
+        commandParameters = "{name} {rank}", -- These are the parameters' variable names in-order of being typed in the command box for the product. (e.g. pts_givecar adder red would need this set to "{model} {red}").
+        purchaseCheckServer = function(fields)
+            if not fields.source or not tonumber(fields.source) then return false, "Invalid source." end
+            if not fields.name or fields.name == "" then return false, "Invalid job name." end
+            return true
+        end,
+        onPurchaseServer = function(fields)
+            local source = tonumber(fields.source)
+            local jobname = fields.name
+            local jobrank = tonumber(fields.rank) or 0
+            SetPlayerJob(source, jobname, jobrank)
+            local job = GetPlayerJob(source)
+            ShowNotification(tonumber(fields.source), "You have been set to " .. job.label .. " " .. job.rank_label .. "!")
         end,
     },
 }

@@ -15,3 +15,7 @@ function _L(name, ...)
         return "ERR_TRANSLATE_404"
     end
 end
+
+function toupper(str)
+    return str:upper()
+end

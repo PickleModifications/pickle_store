@@ -23,7 +23,20 @@ function GetHiddenProducts()
     return hiddenPackages
 end
 
-RegisterNUICallback("requestConfig", function(data, cb)
+function GetWheelPrizes()
+    local prizes = {}
+    for i=1, #Config.DailySpin.prizes do
+        prizes[i] = {
+            id = i - 1,
+            text = Config.DailySpin.prizes[i].text or "Untitled Prize",
+            image = Config.DailySpin.prizes[i].image,
+        }
+    end
+    return prizes
+end
+
+RegisterNUICallback("pageLoaded", function(data, cb)
+    cb(true)
     TriggerServerEvent("pickle_tebexstore:requestInfo")
 end)
 
@@ -38,7 +51,8 @@ RegisterNUICallback("updateBasketIdentifier", function(data, cb)
     cb(true)
 end)
 
-RegisterNUICallback("updateProduct", function(product)
+RegisterNUICallback("updateProduct", function(product, cb)
+    cb(true)
     if not product or not product.id then return end
     TriggerServerEvent("pickle_tebexstore:updateProduct", product.id, product)
 end)
@@ -65,14 +79,16 @@ RegisterNUICallback("purchaseCoinProduct", function(data, cb)
     local product = ProductInfo[productId]
     if not product then return end
     if #product.commands < 1 then return ShowNotification(_L("no_action")) end
+    local clientFields = {}
     for i=1, #product.commands do
         local command = GetCustomCommand(product.commands[i], rawFields[i], {productId = productId})
         if command and command.purchaseCheckClient then
-            local success, reason = command.purchaseCheckClient()
+            local success, reason, additionalFields = command.purchaseCheckClient()
             if not success then return ShowNotification(_L("cancel_command_failed", reason or "Unknown Reason")) end
+            clientFields[i] = additionalFields
         end
     end
-    TriggerServerEvent("pickle_tebexstore:purchaseProduct", productId, rawFields)
+    TriggerServerEvent("pickle_tebexstore:purchaseProduct", productId, rawFields, clientFields)
 end)
 
 RegisterNUICallback("deleteProduct", function(productId, cb)
@@ -82,6 +98,11 @@ end)
 
 RegisterNUICallback("createProduct", function(data, cb)
     TriggerServerEvent("pickle_tebexstore:createProduct", data)
+    cb(true)
+end)
+
+RegisterNUICallback("spinWheel", function(data, cb)
+    TriggerServerEvent("pickle_tebexstore:spinWheel")
     cb(true)
 end)
 
@@ -120,15 +141,33 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function(data)
             customPages = Config.CustomPages,
             image = "images/logo.png",
             coins = LOCAL_DATA.coins,
-            spins = 1,
-            permissions = {
-                manageProducts = true
-            },
+            spins = LOCAL_DATA.spins,
+            nextSpinTime = LOCAL_DATA.nextSpinTime,
+            permissions = LOCAL_DATA.permissions,
             coinCurrency = Config.CoinCurrency,
             productInfo = GetProductInfoArray(),
             customCommands = GetCustomCommandsJS(),
             hiddenProducts = GetHiddenProducts(),
+            wheelPrizes = GetWheelPrizes(),
         }
+    })
+end)
+
+RegisterNetEvent("pickle_tebexstore:startSpin", function(spins, nextSpinTime, prizeId)
+    SendNUIMessage({
+        type = "spinWheel",
+        spins = spins,
+        nextSpinTime = nextSpinTime,
+        prizeId = prizeId,
+    })
+end)
+
+RegisterNetEvent("pickle_tebexstore:openStore", function(products)
+    TriggerScreenblurFadeIn(1000)
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        type = "setVisible",
+        visible = true
     })
 end)
 

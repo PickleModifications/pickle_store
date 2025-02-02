@@ -40,18 +40,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);    
     const [configState, setConfigState] = useState(config);
     const [coins, setCoins] = useState(0);
-    const [spins, setSpins] = useState(0);
     const [basket, setBasket] = useState<BasketUser | null>(null);
     useEffect(() => {
       if (user) {
-        setUser({...user, coins: coins, spins: spins});
+        setUser({...user, coins: coins});
       }
-    }, [coins, spins]);
+    }, [coins]);
     useNuiEvent('updatePlayerCoins', (data) => {
       setCoins(data.coins);
-    });
-    useNuiEvent('updatePlayerSpins', (data) => {
-      setSpins(data.spins);
     });
     useEffect(() => { 
       setConfigState(config) 

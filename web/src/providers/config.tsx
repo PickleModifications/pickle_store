@@ -33,6 +33,12 @@ type CustomFields = {
     placeholder?: string,
 }
 
+type WheelPrize = {
+    id: number;
+    image: string;
+    text: string;
+}
+
 export type Config = {
     theme: string;
     tebexApiKey: string;
@@ -50,6 +56,7 @@ export type Config = {
     coins: number | undefined | null;
     coinCurrency: CoinCurrency | undefined | null;
     hiddenProducts: string[];
+    wheelPrizes: WheelPrize[];
     permissions: {
         manageProducts: boolean;
     },
@@ -94,6 +101,7 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         permissions: {
             manageProducts: false
         },
+        wheelPrizes: [],
         customCommands: {}
     });
     useEffect(() => {

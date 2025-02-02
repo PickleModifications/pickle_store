@@ -334,8 +334,8 @@ export function ProductCard({ product }: { product: Product }) {
             }}>
                 <DialogTrigger>
                     <div className="bg-muted rounded-md animate-appear relative select-none cursor-pointer filter brightness-80 hover:brightness-125 hover:scale-90 hover:z-1 z-0 scale-100 transition ease-in duration-200">
-                        <AspectRatio className="flex" ratio={16 / 9}>
-                            <Image className="rounded-md max-h-full" src={product.image} alt="" width={"100%"} height={"100%"}/>
+                        <AspectRatio className="flex items-center justify-center" ratio={16 / 9}>
+                            <img style={{height: "fit-content"}} className="rounded-md max-h-full" src={product.image} alt=""/>
                             <div className="absolute bottom-0 left-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-75">
                                 <span className="text-sm font-semibold">{product.name}</span>
                             </div>
@@ -364,7 +364,7 @@ export function ProductCard({ product }: { product: Product }) {
                     ) : (
                         <>
                             <DialogTitle className="flex flex-row items-center gap-2">
-                                {(configState.permissions.manageProducts) && (<Edit size={16} className="cursor-pointer hover:" onClick={() => {
+                                {(configState.permissions.manageProducts && product.id.toString().startsWith("coin")) && (<Edit size={16} className="cursor-pointer" onClick={() => {
                                     const category = getProductCategory(product.id, categories);
                                     setEditState({
                                         id: product.id,
@@ -395,8 +395,8 @@ export function ProductCard({ product }: { product: Product }) {
                                                     <iframe width={"100%"} height={"100%"} src={product.videoUrl} frameBorder="0" allowFullScreen />
                                                 </AspectRatio>
                                             ) || (
-                                                <AspectRatio ratio={16 / 9}>
-                                                    <img className="rounded-md w-full h-full" src={product.image} alt=""/>
+                                                <AspectRatio className="flex items-center justify-center" ratio={16 / 9}>
+                                                    <img style={{height: "fit-content"}} className="rounded-md max-h-full" src={product.image} alt=""/>
                                                 </AspectRatio>
                                             )}
                                         <div className="max-h-48 overflow-y-auto" dangerouslySetInnerHTML={{__html: product.description}}>
@@ -492,7 +492,6 @@ export function ProductCard({ product }: { product: Product }) {
 }
 
 function isProductHidden(productId: number | string, hiddenProducts: string[]) {
-    console.log(hiddenProducts)
     if (!hiddenProducts) { return false }
     return hiddenProducts.includes(productId.toString());
 }
@@ -511,10 +510,24 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
     let categories: { [key: string]: { label: string, products: Product[] } } = {
         "all": {label: "All Products", products: []},
     };
+    let coinProducts: Product[] = [];
     let categoriesOrder = ["all"];
     if (userState && userState.products) {
+        for (const product of userState.products) {
+            const productId = product.id;
+            if (!isProductHidden(productId, configState.hiddenProducts)) { 
+                if (product.category?.name) {
+                    if (!categories[product.category.name]) {
+                        categories[product.category.name] = {label: product.category.name, products: []};
+                        categoriesOrder.push(product.category.name);
+                    }
+                    categories[product.category.name].products.push(product);
+                }
+                categories["all"].products.push(product);
+            }
+        }
         for (const configProduct of configState.productInfo || []) {
-            let targetCategory = "all";
+            let targetCategory = "all_coins";
             if (!isProductHidden(configProduct.id, configState.hiddenProducts)) {
                 if (configProduct.category) {
                     targetCategory = configProduct.category;
@@ -542,39 +555,39 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
                     }
                     categories[targetCategory].products.push(productData);
                     if (targetCategory != "all") {
-                        categories["all"].products.push(productData);
+                        coinProducts.push(productData);
                     }
                 }
             }
         }
-        for (const product of userState.products) {
-            const productId = product.id;
-            if (!isProductHidden(productId, configState.hiddenProducts)) { 
-                for (const configProduct of configState.productInfo || []) {
-                    if (configProduct.id == productId) {
-                        if (configProduct.category) {
-                            categories[configProduct.category].products.push(product);
-                        }
-                    }
-                }
-                categories["all"].products.push(product);
-            }
+        for (const category in categories) {
+            categories[category].products = categories[category].products.sort((a, b) => {
+                return b.base_price - a.base_price;
+            });
+        }
+        coinProducts.sort((a, b) => {
+            return b.base_price - a.base_price;
+        });
+        coinProducts.sort((a, b) => {
+            let categoryA = getProductCategory(a.id, categories);
+            let categoryB = getProductCategory(b.id, categories);
+            return categoryA.localeCompare(categoryB);
+        });
+        for (const product of coinProducts) {
+            categories["all"].products.push(product);
         }
     }
     return { categories, categoriesOrder };
 }
 
 export function Products() {
-    const {toast} = useToast();
     const {config} = useConfig();
     const {user, setUser} = useUser();
     const [userState, setUserState] = useState<User | null>(null);
     const [configState, setConfigState] = useState(config);
     useEffect(() => { setConfigState(config) }, [config]);
     useEffect(() => { setUserState(user) }, [user]);
-    const [firstLoad, setFirstLoad] = useState(true);
     const [newProductState, setNewProductState] = useState<EditState | null>(null);
-    const [isAddingProduct, setIsAddingProduct] = useState(false);
     const [currentTab, setCurrentTab] = useState("all");
     let data = getCategorizedProducts(userState, configState);
     let categories = data.categories;
@@ -613,16 +626,7 @@ export function Products() {
                         return (
                             <TabsContent key={category} value={category}>
                                 {configState.permissions.manageProducts && (
-                                    <Dialog open={isAddingProduct} onOpenChange={(open) => {
-                                            if (!open) {
-                                                setTimeout(() => {
-                                                    if (!isAddingProduct) {
-                                                        setNewProductState(null);
-                                                    }
-                                                }, 200);
-                                            }
-                                            setIsAddingProduct(open);
-                                        }}>
+                                    <Dialog open={newProductState != null}>
                                             <DialogTrigger>
                                                 <div className="flex flex-row gap-2 pt-2 items-center w-full">
                                                     <Button className="w-full" variant="secondary" onClick={() => {

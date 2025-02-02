@@ -62,20 +62,26 @@ function AddMoney(source, count)
     xPlayer.Functions.AddMoney('cash',count)
 end
 
-function RemoveMoney(source, count)
+function AddDirtyMoney(source, count)
     local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
-    xPlayer.Functions.RemoveMoney('cash',count)
+    Inventory.AddItem(source, 'dirty_money', count)
 end
 
-function GetMoney(source)
+function RemoveDirtyMoney(source, count)
     local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
-    return xPlayer.PlayerData.money.cash
+    xPlayer.Functions.RemoveMoney('dirty', count)
+end
+
+function GetDirtyMoney(source)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
+    return xPlayer.PlayerData.money.dirty
 end
 
 function GetOwnedVehicleFromPlate(plate)
-    return MySQL.Sync.fetchAll("SELECT * FROM player_vehicles WHERE plate=@plate;", {
+    local data = MySQL.Sync.fetchAll("SELECT * FROM player_vehicles WHERE plate=@plate;", {
         ['@plate'] = plate,
     })[1]
+    return data and {owner = data.citizenid} or nil
 end
 
 function AddOwnedVehicle(source, plate, model)
@@ -86,10 +92,31 @@ function AddOwnedVehicle(source, plate, model)
         ['@citizenid'] = xPlayer.PlayerData.citizenid,
         ['@vehicle'] = model,
         ['@hash'] = joaat(model),
-        ['@plate'] = plate,
+        ['@plate'] = toupper(plate),
         ['@garage'] = "pillboxgarage",
         ['@state'] = 0
     })
+end
+
+function UpdateVehiclePlate(source, plate, newPlate)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
+    MySQL.Async.execute('UPDATE player_vehicles SET plate = @newPlate WHERE plate = @plate AND citizenid = @citizenid',
+    {
+        ['@newPlate'] = newPlate,
+        ['@plate'] = plate,
+        ['@citizenid'] = xPlayer.PlayerData.citizenid
+    })
+end
+
+function GetPlayerJob(source)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
+    if not xPlayer then return end
+    return {label = xPlayer.PlayerData.job.label, rank_label = xPlayer.PlayerData.job.grade.name}
+end
+
+function SetPlayerJob(source, job, grade)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
+    xPlayer.Functions.SetJob(job, grade)
 end
 
 RegisterNetEvent("QBCore:Server:OnJobUpdate", function(player)
@@ -133,7 +160,7 @@ CreateThread(function()
 
     Inventory.UpdateInventory = function(source)
         SetTimeout(1000, function()
-            TriggerClientEvent("pickle_bailbounty:updateInventory", source, Inventory.GetInventory(source))
+            TriggerClientEvent("pickle_tebexstore:updateInventory", source, Inventory.GetInventory(source))
         end)
     end
 
@@ -167,7 +194,7 @@ CreateThread(function()
         return (Inventory.GetItemCount(source, name) > 0)
     end
 
-    RegisterCallback("pickle_bailbounty:getInventory", function(source, cb)
+    RegisterCallback("pickle_tebexstore:getInventory", function(source, cb)
         cb(Inventory.GetInventory(source))
     end)
 

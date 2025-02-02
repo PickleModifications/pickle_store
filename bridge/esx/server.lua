@@ -62,6 +62,11 @@ function AddMoney(source, count)
     xPlayer.addMoney(count)
 end
 
+function AddDirtyMoney(source, count)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    xPlayer.addAccountMoney('black_money', count)
+end
+
 function RemoveMoney(source, count)
     local xPlayer = ESX.GetPlayerFromId(source)
     xPlayer.removeMoney(count)
@@ -73,9 +78,10 @@ function GetMoney(source)
 end
 
 function GetOwnedVehicleFromPlate(plate)
-    return MySQL.Sync.fetchAll("SELECT * FROM owned_vehicles WHERE plate=@plate;", {
+    local data = MySQL.Sync.fetchAll("SELECT * FROM owned_vehicles WHERE plate=@plate;", {
         ['@plate'] = plate,
     })[1]
+    return data and {owner = data.owner} or nil 
 end
 
 function AddOwnedVehicle(source, plate, model)
@@ -84,11 +90,33 @@ function AddOwnedVehicle(source, plate, model)
         ['@owner'] = xPlayer.identifier,
         ['@plate'] = plate,
         ['@vehicle'] = json.encode({
-            plate = plate,
+            plate = toupper(plate),
             model = joaat(model),
         }),
     })
 end
+
+function UpdateVehiclePlate(source, plate, newPlate)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    MySQL.Async.execute("UPDATE owned_vehicles SET plate=@newPlate WHERE owner=@owner AND plate=@plate;", {
+        ['@owner'] = xPlayer.identifier,
+        ['@plate'] = plate,
+        ['@newPlate'] = newPlate,
+    })
+end
+
+function GetPlayerJob(source)
+    local xPlayer = ESX.GetPlayerFromId(tonumber(source))
+    if not xPlayer then return "Unknown Job", "Unknown Grade" end
+    return {label = xPlayer.job.label, rank_label = xPlayer.job.grade_label}
+end
+
+function SetPlayerJob(source, job, grade)
+    local xPlayer = ESX.GetPlayerFromId(tonumber(source))
+    if not xPlayer then return end
+    xPlayer.setJob(job, grade)
+end
+
 
 RegisterNetEvent('esx:setJob', function(player, job, lastJob)
     ResyncPermissions(player)
@@ -137,7 +165,7 @@ CreateThread(function()
 
     Inventory.UpdateInventory = function(source)
         SetTimeout(1000, function()
-            TriggerClientEvent("pickle_bailbounty:updateInventory", source, Inventory.GetInventory(source))
+            TriggerClientEvent("pickle_tebexstore:updateInventory", source, Inventory.GetInventory(source))
         end)
     end
 
@@ -176,7 +204,7 @@ CreateThread(function()
         return xPlayer.hasWeapon(name)
     end
 
-    RegisterCallback("pickle_bailbounty:getInventory", function(source, cb)
+    RegisterCallback("pickle_tebexstore:getInventory", function(source, cb)
         cb(Inventory.GetInventory(source))
     end)
 

@@ -91,7 +91,7 @@ function App() {
               </div>
               <div className="transform transform-z-0 rounded-md" id='dialog-container' style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "hidden", pointerEvents: "none", zIndex: 100}}></div>
               <div className="transform transform-z-0 rounded-md" id='loading-container' style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "hidden", pointerEvents: "none", zIndex: 150}}>
-                {loadingState && (<div className="pointer-events-auto select-none flex justify-center items-center w-full h-full bg-opacity-50 backdrop-blur-sm"> 
+                {loadingState && (<div className="pointer-events-auto select-none flex justify-center items-center w-full h-full bg-opacity-50 backdrop-blur-sm rounded-md" style={{backgroundColor: "rgba(0, 0, 0, 0.75)"}}> 
                   {loadingState}
                 </div>)}
               </div>

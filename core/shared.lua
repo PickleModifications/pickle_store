@@ -25,3 +25,7 @@ end
 function tolower(str)
     return string.lower(str)
 end
+
+function GetItemLabel(name)
+    return (Inventory.Items[name] and Inventory.Items[name].label or name)
+end

@@ -55,7 +55,7 @@ end)
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded',function(xPlayer, isNew, skin)
-    TriggerServerEvent("pickle_bailbounty:initializePlayer")
+    TriggerServerEvent("pickle_tebexstore:initializePlayer")
 end)
 
 function ToggleOutfit(onduty)
@@ -88,12 +88,12 @@ CreateThread(function()
     
     Inventory.Ready = false
     
-    RegisterNetEvent("pickle_bailbounty:setupInventory", function(data)
+    RegisterNetEvent("pickle_tebexstore:setupInventory", function(data)
         Inventory.Items = data.items
         Inventory.Ready = true
     end)
     
-    RegisterNetEvent("pickle_bailbounty:updateInventory", function(inventory) 
+    RegisterNetEvent("pickle_tebexstore:updateInventory", function(inventory) 
         -- RefreshInventory(inventory)
     end)
 end)

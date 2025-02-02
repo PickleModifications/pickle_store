@@ -13,4 +13,6 @@ Language["en"] = {
     cancel_command_failed = "The purchase cannot be completed as the command failed to execute: %s",
     purchase_success = "You have successfully purchased %s for %s %s.",
     user_purchase_limit_reached = "You have reached the purchase limit for this product.",
+    insufficient_spins = "You do not have any pending wheel spins available.",
+    spin_cooldown = "You must wait until your next daily spin to do this.",
 }

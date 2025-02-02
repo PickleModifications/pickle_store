@@ -7,6 +7,9 @@ function UpdateCoins(coins)
     })
 end
 
+function ResyncPermissions()
+end
+
 RegisterNetEvent("pickle_tebexstore:purchaseProduct", function(productId, commandArgs)
     local product = ProductInfo[productId]
     if not product then return end

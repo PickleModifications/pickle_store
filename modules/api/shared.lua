@@ -30,23 +30,23 @@ function GetCommandFromString(str)
     return arr[1], args
 end
 
-function GetCustomCommand(command, rawFields, extraFields)
+function GetCustomCommand(command, rawFields, extraFields, isParsed)
     local extraFields = extraFields or {}
     local commandPrefix, args = GetCommandFromString(command)
     if not commandPrefix then return end
     local customCommandCfg = Config.CustomCommands[commandPrefix]
     if not customCommandCfg then return end
     local fieldsCfg = customCommandCfg.fields or {}
-    local fields = {}
-    for i=1, #fieldsCfg do
-        local field = fieldsCfg[i]
-        local value = rawFields[i]
-        if value then 
-            fields[field.variable] = value
+    local fields = (isParsed and rawFields or {})
+    if not isParsed then
+        for i=1, #fieldsCfg do
+            local field = fieldsCfg[i]
+            local value = rawFields[i]
+            if value then 
+                fields[field.variable] = value
+            end
         end
     end
-    fields.productId = extraFields.productId
-    fields.source = extraFields.source
     local commandFormat = split(customCommandCfg.commandParameters or "", " ")
     for i=1, #args do
         if commandFormat[i] then
@@ -55,6 +55,9 @@ function GetCustomCommand(command, rawFields, extraFields)
                 fields[currentVariable] = args[i]
             end
         end
+    end
+    for k,v in pairs(extraFields) do
+        fields[k] = v
     end
     return {
         name = commandPrefix,

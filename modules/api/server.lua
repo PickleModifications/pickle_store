@@ -141,6 +141,8 @@ function AddCoins(source, credit)
     end)
 end
 
+exports("AddCoins", AddCoins)
+
 function RemoveCoins(source, credit)
     local userInfo = UserInfo[source]
     if not userInfo then return end
@@ -154,7 +156,23 @@ function RemoveCoins(source, credit)
     end)
 end
 
-function PurchaseProduct(source, productId, rawFields)
+exports("RemoveCoins", RemoveCoins)
+
+function GetCoins(source)
+    local userInfo = UserInfo[source]
+    if not userInfo then return 0 end
+    return userInfo.coins
+end
+
+exports("GetCoins", GetCoins)
+
+function GetUserInfo(source)
+    return UserInfo[source]
+end
+
+exports("GetUserInfo", GetUserInfo)
+
+function PurchaseProduct(source, productId, rawFields, clientFields)
     local source = source
     local product = ProductInfo[productId]
     local userInfo = UserInfo[source]
@@ -167,7 +185,11 @@ function PurchaseProduct(source, productId, rawFields)
         if paymentCount >= product.userLimit then return ShowNotification(source, _L("user_purchase_limit_reached")) end
     end
     for i=1, #product.commands do
-        local command = GetCustomCommand(product.commands[i], rawFields[i], {productId = productId, source = source})
+        local additionalFields = clientFields[i] or {}
+        additionalFields.productId = productId
+        additionalFields.source = source
+        print(json.encode(clientFields))
+        local command = GetCustomCommand(product.commands[i], rawFields[i], additionalFields)
         if command and command.purchaseCheckServer then
             local success, reason = command.purchaseCheckServer()
             if not success then return ShowNotification(source, _L("cancel_command_failed", reason or "Unknown Reason")) end
@@ -187,7 +209,10 @@ function PurchaseProduct(source, productId, rawFields)
         end
     end
     for i=1, #product.commands do
-        local command = GetCustomCommand(product.commands[i], rawFields[i], {productId = productId, source = source})
+        local additionalFields = clientFields[i] or {}
+        additionalFields.productId = productId
+        additionalFields.source = source
+        local command = GetCustomCommand(product.commands[i], rawFields[i], additionalFields)
         if command then
             if command.onPurchaseServer then
                 print("Custom coin command execution: " .. json.encode({name = command.name, fields = command.fields}))
@@ -200,13 +225,15 @@ function PurchaseProduct(source, productId, rawFields)
         end
     end
     ShowNotification(source, _L("purchase_success", product.title, product.coins, tolower(product.coins == 1 and Config.CoinCurrency.singular or Config.CoinCurrency.plural)))
-    TriggerClientEvent("pickle_tebexstore:purchaseProduct", source, productId, rawFields)
+    TriggerClientEvent("pickle_tebexstore:purchaseProduct", source, productId, rawFields, clientFields)
 end
 
 function UpdateUser(source)
-    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins, `purchases`=@purchases WHERE `identifier`=@identifier;", {
-        ["@purchases"] = json.encode(UserInfo[source].purchases),
-        ["@coins"] = UserInfo[source].coins,
+    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins, `spins`=@spins, `nextSpinTime`=@nextSpinTime, `purchases`=@purchases WHERE `identifier`=@identifier;", {
+        ["@purchases"] = json.encode(UserInfo[source].purchases or {}) or "[]",
+        ["@coins"] = UserInfo[source].coins or 0,
+        ["@spins"] = UserInfo[source].spins or 0,
+        ["@nextSpinTime"] = UserInfo[source].nextSpinTime or 0,
         ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
     }, function(rowsChanged)
         print("Updated user with " .. rowsChanged .. " rows changed.")
@@ -228,7 +255,7 @@ function UpdateProduct(productId)
         ["@description"] = ProductInfo[productId].description,
         ["@image"] = ProductInfo[productId].image,
         ["@coins"] = ProductInfo[productId].coins,
-        ["@category"] = ProductInfo[productId].category,
+        ["@category"] = (ProductInfo[productId].category and ProductInfo[productId].category ~= "") and ProductInfo[productId].category or "all",
         ["@globalLimit"] = ProductInfo[productId].globalLimit,
         ["@userLimit"] = ProductInfo[productId].userLimit,
         ["@commands"] = json.encode(ProductInfo[productId].commands),
@@ -254,110 +281,21 @@ function GetProductInfo(product)
     }
 end
 
-RegisterNetEvent("pickle_tebexstore:purchaseProduct", function(productId, rawFields) 
-    local source = source
-    if PerformingAction[source] then return end
-    PerformingAction[source] = true
-    PurchaseProduct(source, productId, rawFields)
-    PerformingAction[source] = false
-end)
-
-RegisterNetEvent("pickle_tebexstore:updateProduct", function(id, product)
-    if not ProductInfo[id or ""] then return end
-    ProductInfo[id] = GetProductInfo(product)
-    UpdateProduct(id)
-end)
-
-RegisterNetEvent("pickle_tebexstore:deleteProduct", function(productId)
-    if not ProductInfo[productId] then return end
-    DeleteProduct(productId)
-end)
-
-RegisterNetEvent("pickle_tebexstore:createProduct", function(product)
-    local id = GenerateProductId()
-    if ProductInfo[id] then return end
-    product.base_price = tonumber(product.base_price or "")
-    product.globalLimit = tonumber(product.globalLimit or "")
-    product.userLimit = tonumber(product.userLimit or "")
-    ProductInfo[id] = GetProductInfo(product)
-    MySQL.Async.execute("INSERT INTO `pts_products` (`id`, `title`, `description`, `image`, `coins`, `category`, `globalLimit`, `userLimit`, `commands`) VALUES (@id, @title, @description, @image, @coins, @category, @globalLimit, @userLimit, @commands);", {
-        ["@id"] = id,
-        ["@title"] = ProductInfo[id].title,
-        ["@description"] = ProductInfo[id].description,
-        ["@image"] = ProductInfo[id].image,
-        ["@coins"] = ProductInfo[id].coins,
-        ["@category"] = ProductInfo[id].category,
-        ["@globalLimit"] = ProductInfo[id].globalLimit,
-        ["@userLimit"] = ProductInfo[id].userLimit,
-        ["@commands"] = json.encode(ProductInfo[id].commands),
-    }, function(rowsChanged)
-        print("Created product with " .. rowsChanged .. " rows changed.")
-    end)
-    TriggerClientEvent("pickle_tebexstore:updateProducts", -1, ProductInfo)
-end)
-
-RegisterCommand("redeem", function(source, args, raw)
-    local transactionId = args[1]
-    local success, reason = RedeemTransaction(transactionId, source)
-    ShowNotification(source, reason)
-end)
-
-RegisterCommand("pts_addcoins", function(source, args, raw)
-    print("RUNNING pts_addcoins!!!")
-    if not (source == 0 and args) then return end
-    if tonumber(args[1]) then 
-        -- Give to player directly.
-        local target = tonumber(args[1])
-        local credit = tonumber(args[2])
-        if not target or not credit then print("Invalid args for pts_addcoins (game):", target, credit) return end
-        AddCoins(target, credit)
-    else
-        -- Give to player offline.
-        local transactionId = args[1]
-        local usernameId = tonumber(args[2]) or nil
-        local credit = tonumber(args[3])
-        if not transactionId or not credit then print("Invalid args for pts_addcoins (tebex):", transactionId, credit) return end
-        local redeemCommand = "pts_addcoins {pts_server_id} " .. credit
-        for k,v in pairs(AwaitingTransactions) do
-            if k == transactionId then
-                RedeemVerifiedTransaction(transactionId, v, {{ command = redeemCommand }})
-                return
-            end
+function ProcessTebexCommand(transactionId, usernameId, redeemCommand)
+    for k,v in pairs(AwaitingTransactions) do
+        if k == transactionId then
+            RedeemVerifiedTransaction(transactionId, v, {{ command = redeemCommand }})
+            return
         end
-        for k,v in pairs(UserInfo) do 
-            if v.username_id and v.username_id == usernameId then
-                RedeemVerifiedTransaction(transactionId, k, {{ command = redeemCommand }})
-                return
-            end
-        end
-        AddTransactionCommand(transactionId, usernameId, redeemCommand)
     end
-
-    -- They are offline, send to pending.
-
-end, false)
-
-RegisterCommand("pts_giveitem", function(source, args, raw)
-    if not (source == 0 and args) then return end
-    local target = tonumber(args[1])
-
-    local item = args[2]
-    local amount = tonumber(args[3])
-    Inventory.AddItem(target, item, amount, json.decode(args[4] or "{}"))
-end)
-
-RegisterCommand("pts_command", function(source, args, raw)
-    print("RUNNING CMD!!!", raw)
-    if not (source == 0 and args) then return end
-    local transactionId = args[1]
-    local usernameId = tonumber(args[2]) or nil
-    local redeemCommand = GetRedeemCommand(args)
-    local target = GetPlayerFromFiveMId(usernameId)
-    -- if target then
-    --     return ExecuteTebexCommand(target, redeemCommand)
-    -- end
+    for k,v in pairs(UserInfo) do 
+        if v.username_id and v.username_id == usernameId then
+            RedeemVerifiedTransaction(transactionId, k, {{ command = redeemCommand }})
+            return
+        end
+    end
     AddTransactionCommand(transactionId, usernameId, redeemCommand)
-end, false)
+end
 
 function GetFiveMUsername(identifier, cb)
     PerformHttpRequest("https://policy-live.fivem.net/api/getUserInfo/"..identifier, function(statusCode, response, headers)
@@ -367,6 +305,28 @@ function GetFiveMUsername(identifier, cb)
             cb(nil)
         end
     end, 'GET', nil)
+end
+
+function IsStoreManager(source)
+    local identifiers = GetPlayerIdentifiers(source)
+    for i=1, #identifiers do
+        for j=1, #Config.StoreManagers do
+            if identifiers[i] == Config.StoreManagers[j] then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+for k,v in pairs(Config.CustomCommands) do 
+    if v.tebexCommand then
+        RegisterCommand(k, function(source, args, raw)
+            if (source ~= 0) then return end
+            print("Recieved Tebex Command: ", raw)
+            v.tebexCommand(args, raw)
+        end, false)
+    end
 end
 
 lib.callback.register('pickle_tebexstore:getPurchaseUrl', function(source, packageId)
@@ -415,7 +375,7 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function()
     data.productInfo = ProductInfo
     local source = source
     local identifiers = {
-        fivem = GetPlayerIdentifierByType(source, "fivem") or ("fivem:" .. 8306616),
+        fivem = GetPlayerIdentifierByType(source, "fivem"),
         discord = GetPlayerIdentifierByType(source, "discord"),
     }
     if identifiers.discord then
@@ -428,17 +388,21 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function()
     end
     MySQL.Async.fetchAll("SELECT * FROM `pts_users` WHERE `identifier`=@identifier;", {["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix)}, function(rows)
         if #rows < 1 then
-            rows[1] = { coins = 0 }
-            MySQL.Async.execute("INSERT IGNORE INTO `pts_users` (`identifier`, `fivem_id`, `discord_id`, `coins`) VALUES (@identifier, @fivem_id, @discord_id, @coins)", {
+            rows[1] = { coins = 0, spins = 1, nextSpinTime = 0 }
+            MySQL.Async.execute("INSERT IGNORE INTO `pts_users` (`identifier`, `fivem_id`, `discord_id`, `coins`, `spins`, `nextSpinTime`) VALUES (@identifier, @fivem_id, @discord_id, @coins, @spins, @nextSpinTime)", {
                 ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
                 ["@fivem_id"] = tostring(data.username_id),
                 ["@discord_id"] = tostring(data.discord_id),
                 ["@coins"] = 0,
+                ["@spins"] = 1,
+                ["@nextSpinTime"] = 0,
             }, function(rowsChanged)
                 print("Inserted new user with " .. rowsChanged .. " rows changed.")
             end)
         end
         data.coins = rows[1].coins
+        data.spins = rows[1].spins
+        data.nextSpinTime = rows[1].nextSpinTime
         data.purchases = json.decode(rows[1].purchases) or {}
         if data.username_id then
             return GetFiveMUsername(data.username_id, function(username)
@@ -455,10 +419,146 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function()
                 TriggerClientEvent("pickle_tebexstore:requestInfo", source, data)
             end)
         end
+        print(data.discord_id)
+        data.permissions = {manageProducts = IsStoreManager(source)}
         UserInfo[source] = data
         TriggerClientEvent("pickle_tebexstore:requestInfo", source, data)
+        TriggerClientEvent("pickle_tebexstore:setupInventory", source, Inventory.Items)
     end)
 end)
+
+RegisterNetEvent("pickle_tebexstore:purchaseProduct", function(productId, rawFields, clientFields) 
+    local source = source
+    if PerformingAction[source] then return end
+    PerformingAction[source] = true
+    PurchaseProduct(source, productId, rawFields, clientFields)
+    PerformingAction[source] = false
+end)
+
+RegisterNetEvent("pickle_tebexstore:updateProduct", function(id, product)
+    local source = source
+    if not IsStoreManager(source) then return ShowNotification(source, _L("no_permission")) end
+    if not ProductInfo[id or ""] then return end
+    ProductInfo[id] = GetProductInfo(product)
+    UpdateProduct(id)
+end)
+
+RegisterNetEvent("pickle_tebexstore:deleteProduct", function(productId)
+    local source = source
+    if not IsStoreManager(source) then return ShowNotification(source, _L("no_permission")) end
+    if not ProductInfo[productId] then return end
+    DeleteProduct(productId)
+end)
+
+RegisterNetEvent("pickle_tebexstore:createProduct", function(product)
+    if not IsStoreManager(source) then return ShowNotification(source, _L("no_permission")) end
+    local id = GenerateProductId()
+    if ProductInfo[id] then return end
+    product.base_price = tonumber(product.base_price or "")
+    product.globalLimit = tonumber(product.globalLimit or "")
+    product.userLimit = tonumber(product.userLimit or "")
+    ProductInfo[id] = GetProductInfo(product)
+    MySQL.Async.execute("INSERT INTO `pts_products` (`id`, `title`, `description`, `image`, `coins`, `category`, `globalLimit`, `userLimit`, `commands`) VALUES (@id, @title, @description, @image, @coins, @category, @globalLimit, @userLimit, @commands);", {
+        ["@id"] = id,
+        ["@title"] = ProductInfo[id].title,
+        ["@description"] = ProductInfo[id].description,
+        ["@image"] = ProductInfo[id].image,
+        ["@coins"] = ProductInfo[id].coins,
+        ["@category"] = (ProductInfo[id].category and ProductInfo[id].category ~= "") and ProductInfo[id].category or "all",
+        ["@globalLimit"] = ProductInfo[id].globalLimit,
+        ["@userLimit"] = ProductInfo[id].userLimit,
+        ["@commands"] = json.encode(ProductInfo[id].commands),
+    }, function(rowsChanged)
+        print("Created product with " .. rowsChanged .. " rows changed.")
+    end)
+    TriggerClientEvent("pickle_tebexstore:updateProducts", -1, ProductInfo)
+end)
+
+RegisterNetEvent("pickle_tebexstore:spinWheel", function()
+    local source = source
+    local userInfo = UserInfo[source]
+    if not userInfo then return end
+    if userInfo.spins < 1 then
+        local timeLeft = userInfo.nextSpinTime - os.time()
+        if timeLeft > 0 then
+            ShowNotification(source, _L("spin_cooldown"))
+            return
+        else
+            userInfo.spins = 1
+        end
+    end
+    userInfo.spins = userInfo.spins - 1
+    if userInfo.spins <= 0 then
+        userInfo.spins = 0
+        userInfo.nextSpinTime = os.time() + (Config.DailySpin.cooldown or 86400)
+    end
+    UpdateUser(source)
+    local prizes = Config.DailySpin.prizes
+    local totalChance = 0
+    for _, prize in ipairs(prizes) do
+        totalChance = totalChance + prize.chance
+    end
+
+    local rng = math.random() * totalChance
+    local cumulativeChance = 0
+    local selectedPrizeIndex = nil
+    local selectedPrize = nil
+
+    for prizeIndex, prize in ipairs(prizes) do
+        cumulativeChance = cumulativeChance + prize.chance
+        if rng <= cumulativeChance then
+            selectedPrizeIndex = prizeIndex
+            selectedPrize = prize
+            break
+        end
+    end
+    
+    if selectedPrizeIndex then
+        local product = prizes[selectedPrizeIndex]
+        SetTimeout(5000, function()
+            for i=1, #product.commands do
+                if not product.commands[i] or #product.commands[i] < 1 then return end
+                local command = GetCustomCommand(product.commands[i][1], product.commands[i][2], {productId = productId, source = source}, true)
+                if command then
+                    if command.onPurchaseServer then
+                        print("Custom coin command execution (daily spin): " .. json.encode({name = command.name, fields = command.fields}))
+                        command.onPurchaseServer()
+                    end
+                else
+                    local commandString = GetCommandReplaced(source, product.commands[i][1], {productId = productId})
+                    print("Executing non-config coin command (daily spin): " .. commandString)
+                    ExecuteCommand(commandString)
+                end
+            end
+        end)
+        TriggerClientEvent("pickle_tebexstore:startSpin", source, userInfo.spins, userInfo.nextSpinTime, selectedPrizeIndex)
+    end
+end)
+
+RegisterCommand("redeem", function(source, args, raw)
+    local transactionId = args[1]
+    local success, reason = RedeemTransaction(transactionId, source)
+    ShowNotification(source, reason)
+end)
+
+RegisterCommand("pts_command", function(source, args, raw)
+    print("RUNNING CMD!!!", raw)
+    if not (source == 0 and args) then return end
+    local transactionId = args[1]
+    local usernameId = tonumber(args[2]) or nil
+    local redeemCommand = GetRedeemCommand(args)
+    local target = GetPlayerFromFiveMId(usernameId)
+    -- if target then
+    --     return ExecuteTebexCommand(target, redeemCommand)
+    -- end
+    AddTransactionCommand(transactionId, usernameId, redeemCommand)
+end, false)
+
+for i=1, #Config.Advertisements do 
+    lib.cron.new(Config.Advertisements[i].interval, function()
+        TriggerClientEvent(GetCurrentResourceName()..":showNotification", -1, Config.Advertisements[i].message)
+    end)
+end
 
 MySQL.ready(function()
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_pending_transactions` (`id` INT PRIMARY KEY AUTO_INCREMENT, `transaction_id` VARCHAR(255), `fivem_id` INT, `command` LONGTEXT)", {}, function(rowsChanged)
@@ -467,7 +567,7 @@ MySQL.ready(function()
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_redeemed_transactions` (`id` INT PRIMARY KEY AUTO_INCREMENT, `transaction_id` VARCHAR(255), `identifiers` LONGTEXT)", {}, function(rowsChanged)
         if rowsChanged > 0 then print("Created table `pts_redeemed_transactions` with " .. rowsChanged .. " rows changed.") end
     end)
-    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`identifier` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT, `purchases` LONGTEXT)", {}, function(rowsChanged)
+    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`identifier` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT, `spins` INT, `nextSpinTime` INT, `purchases` LONGTEXT)", {}, function(rowsChanged)
         if rowsChanged > 0 then print("Created table `pts_users` with " .. rowsChanged .. " rows changed.") end
     end)
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_products` ( `id` VARCHAR(255) PRIMARY KEY, `title` varchar(255) NOT NULL, `description` longtext NOT NULL, `image` longtext NOT NULL, `coins` int(11) NOT NULL DEFAULT 0, `globalLimit` int(11) DEFAULT 0, `userLimit` int(11) DEFAULT 0, `category` longtext DEFAULT NULL, `commands` longtext DEFAULT NULL )", {}, function(rowsChanged)
@@ -485,6 +585,39 @@ MySQL.ready(function()
                     userLimit = rows[i].userLimit,
                     commands = json.decode(rows[i].commands) or {},
                 }
+            end
+            if #rows == 0 and Config.InsertDefaultProducts then
+                MySQL.Async.execute([[INSERT INTO `pts_products` (`id`, `title`, `description`, `image`, `coins`, `globalLimit`, `userLimit`, `category`, `commands`) VALUES
+                    ('coin_1738458644_2634', 'Adder', 'This is the fastest vehicle in the game, go ahead and get it now!', 'https://docs.fivem.net/vehicles/adder.webp', 100, 0, 0, 'Vehicles', '["pts_givecar adder"]'),
+                    ('coin_1738458758_8130', 'Pistol', 'A deadly weapon used to take out the opposition.', 'nui://ox_inventory/web/images/weapon_pistol.png', 150, 0, 0, 'Weapons', '["pts_giveitem weapon_pistol 1"]'),
+                    ('coin_1738458876_4812', 'Water', 'Tastes pretty good, not bad at all!', 'nui://ox_inventory/web/images/water.png', 5, 0, 0, 'Food & Water', '[]'),
+                    ('coin_1738458912_5476', 'Burger', 'I like burgers.', 'nui://ox_inventory/web/images/burger.png', 5, 0, 0, 'Food & Water', '[""]'),
+                    ('coin_1738459265_5495', 'Ammo (9mm)', 'You will recieve 100 bullets for your pistols.', 'nui://ox_inventory/web/images/ammo-9.png', 10, 0, 0, 'Weapons', '["pts_giveitem ammo-9 100"]'),
+                    ('coin_1738460206_5915', 'Plate Change', 'Change your current vehicle\'s plate!', 'images/plate.png', 50, 0, 0, 'all', '["pts_plate"]'),
+                    ('coin_1738460552_3162', 'Job - Police Officer', 'Become an officer today!', 'https://docs.fivem.net/peds/s_m_y_cop_01.webp', 200, 0, 0, 'Jobs', '["pts_setjob police 0"]'),
+                    ('coin_1738460682_5319', 'Whippet (Grape)', 'No description provided.', 'nui://ox_inventory/web/images/n2o_grape.png', 25, 0, 0, 'Drugs', '["pts_giveitem n2o_grape"]'),
+                    ('coin_1738460835_7052', 'Whippet (Strawberry)', 'No description provided.', 'nui://ox_inventory/web/images/n2o_strawberry.png', 25, 0, 0, 'Drugs', '["pts_giveitem n2o_strawberry 1"]'),
+                    ('coin_1738461475_6122', 'Job - Paramedic', 'Become a paramedic today!', 'https://docs.fivem.net/peds/s_m_m_doctor_01.webp', 200, 0, 0, 'Jobs', '[]'),
+                    ('coin_1738462156_9043', 'Yacht (1-of-1 Exclusive) ', 'I think this yacht is pretty cool - and it can be yours and yours only!', 'https://docs.fivem.net/vehicles/marquis.webp', 25, 1, 0, 'Vehicles', '["pts_givecar marquis"]');
+                ]], {}, function(rowsChanged)
+                    print("Inserted default products with " .. rowsChanged .. " rows changed.")
+                    MySQL.Async.fetchAll("SELECT * FROM `pts_products`;", {}, function(rows)
+                        for i=1, #rows do
+                            local id = (tonumber(rows[i].id) ~= nil and tonumber(rows[i].id) or rows[i].id)
+                            ProductInfo[id] = {
+                                title = rows[i].title,
+                                description = rows[i].description,
+                                image = rows[i].image,
+                                coins = rows[i].coins,
+                                category = rows[i].category,
+                                globalLimit = rows[i].globalLimit,
+                                userLimit = rows[i].userLimit,
+                                commands = json.decode(rows[i].commands) or {},
+                            }
+                        end
+                        TriggerClientEvent("pickle_tebexstore:updateProducts", -1, ProductInfo)
+                    end)
+                end)
             end
         end)
     end)

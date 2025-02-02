@@ -15,7 +15,14 @@ import Image from "@/components/image"
 import { useConfig } from "@/providers/config"
 import { getApiUser, getPriceString } from "@/utils"
 import { AddPackageToCart, ProductOption } from "../product/Product"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { useLoading } from "@/providers/loading"
 import { useNuiEvent } from "@/providers/nui/useNui"
 import { fetchNui } from "@/providers/nui/fetchNui"

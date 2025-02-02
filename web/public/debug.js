@@ -1,4 +1,4 @@
-let loaded = false;
+const DEBUG_MODE = false;
 
 function RunDebugEvents() {
     window.postMessage({
@@ -10,6 +10,7 @@ function RunDebugEvents() {
             customPages: [],
             coins: 25,
             spins: 1,
+            nextSpinTime: 0,
             coinCurrency: {
                 plural: "Coins",
                 singular: "Coin",
@@ -25,17 +26,10 @@ function RunDebugEvents() {
             },
             productInfo: [
                 {
-                    id: 6398473,
-                    category: "Character",
-                    commands: [
-                        "pts_addcharslot {pts_server_id} 1"
-                    ]
-                },
-                {
                     id: "coin_1",
                     title: "Adder Super 200XR",
                     description: "Get the Adder Super 200XR added to your garage.",
-                    image: "https://dunb17ur4ymx4.cloudfront.net/packages/images/1fa9ed7ca58b4800414b49a2cd5e8de6793ae852.png",
+                    image: "https://docs.fivem.net/vehicles/adder.webp",
                     coins: 50000,
                     category: "Vehicles",
                     globalLimit: 50,
@@ -65,25 +59,16 @@ function RunDebugEvents() {
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    fetch('https://pickle_tebexstore/requestConfig', {
+    fetch('https://pickle_tebexstore/pageLoaded', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({})
-    }).then((response) => {
-        if (loaded) return;
-        loaded = true;
-        response.json().then((data) => {
-            console.log('Sending config data to NUI', data);
-            window.postMessage(data, '*');
-        });
-    }).catch((error) => {
-        if (loaded) return;
-        loaded = true;
-        if (error) {
-            console.error('Error fetching config data', error);
-            RunDebugEvents();
-        }
     })
-});
+    if (DEBUG_MODE) {
+        setTimeout(() => {
+            RunDebugEvents();
+        }, 1000);
+    }   
+}, { once: true });
