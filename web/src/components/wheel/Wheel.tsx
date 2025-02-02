@@ -23,7 +23,6 @@ export default () => {
     const [spinDone, setSpinDone] = useState(false);
     const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
     let spins = (userState?.spins || 0);
-    console.log("CURRENT SPINS: ", spins);
     const nextSpinTime = (userState?.nextSpinTime || 0);
     if (spins < 1 && currentTime >= nextSpinTime) {
         spins = 1;

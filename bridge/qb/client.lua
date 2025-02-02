@@ -63,7 +63,7 @@ RegisterNetEvent(GetCurrentResourceName()..":showNotification", function(text)
 end)
 
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
-    TriggerServerEvent("pickle_tebexstore:initializePlayer")
+    TriggerServerEvent("pickle_store:initializePlayer")
 end)
 
 -- Inventory Fallback
@@ -79,12 +79,12 @@ CreateThread(function()
     
     Inventory.Ready = false
     
-    RegisterNetEvent("pickle_tebexstore:setupInventory", function(data)
+    RegisterNetEvent("pickle_store:setupInventory", function(data)
         Inventory.Items = data.items
         Inventory.Ready = true
     end)
     
-    RegisterNetEvent("pickle_tebexstore:updateInventory", function(inventory) 
+    RegisterNetEvent("pickle_store:updateInventory", function(inventory) 
         -- RefreshInventory(inventory)
     end)
 end)

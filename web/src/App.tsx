@@ -77,7 +77,6 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-  console.log(configState.theme)
   return (
     <div className="w-screen h-screen absolute top-0 left-0">
         <div className="bg-background absolute rounded-md transition-opacity duration-200" style={{ opacity: (opening ? 1 : 0), width: 1280, height: 720, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>

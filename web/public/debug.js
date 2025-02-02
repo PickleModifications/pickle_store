@@ -59,7 +59,7 @@ function RunDebugEvents() {
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    fetch('https://pickle_tebexstore/pageLoaded', {
+    fetch('https://pickle_store/pageLoaded', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

@@ -116,7 +116,6 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
         });
     });
     useNuiEvent("setConfig", function(data) {
-        console.log(data.config.spins)
         setConfig(data.config);
     });
 

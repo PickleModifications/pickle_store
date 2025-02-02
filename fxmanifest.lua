@@ -1,7 +1,7 @@
 fx_version "cerulean"
 game "gta5"
 author "Pickle Mods"
-description "The Best Heists System for FiveM"
+description "The best system for in-game monetization using Tebex."
 version "v1.0.0"
 
 ui_page "nui/index.html"

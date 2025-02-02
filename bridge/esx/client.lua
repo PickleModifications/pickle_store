@@ -55,7 +55,7 @@ end)
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded',function(xPlayer, isNew, skin)
-    TriggerServerEvent("pickle_tebexstore:initializePlayer")
+    TriggerServerEvent("pickle_store:initializePlayer")
 end)
 
 function ToggleOutfit(onduty)
@@ -88,12 +88,12 @@ CreateThread(function()
     
     Inventory.Ready = false
     
-    RegisterNetEvent("pickle_tebexstore:setupInventory", function(data)
+    RegisterNetEvent("pickle_store:setupInventory", function(data)
         Inventory.Items = data.items
         Inventory.Ready = true
     end)
     
-    RegisterNetEvent("pickle_tebexstore:updateInventory", function(inventory) 
+    RegisterNetEvent("pickle_store:updateInventory", function(inventory) 
         -- RefreshInventory(inventory)
     end)
 end)

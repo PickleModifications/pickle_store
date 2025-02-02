@@ -37,7 +37,7 @@ end
 
 RegisterNUICallback("pageLoaded", function(data, cb)
     cb(true)
-    TriggerServerEvent("pickle_tebexstore:requestInfo")
+    TriggerServerEvent("pickle_store:requestInfo")
 end)
 
 RegisterNUICallback("setVisible", function(data, cb)
@@ -54,17 +54,17 @@ end)
 RegisterNUICallback("updateProduct", function(product, cb)
     cb(true)
     if not product or not product.id then return end
-    TriggerServerEvent("pickle_tebexstore:updateProduct", product.id, product)
+    TriggerServerEvent("pickle_store:updateProduct", product.id, product)
 end)
 
 RegisterNUICallback("purchaseProduct", function(packageId, cb)
-    lib.callback('pickle_tebexstore:getPurchaseUrl', false, function(tebexResult)
+    lib.callback('pickle_store:getPurchaseUrl', false, function(tebexResult)
         cb(tebexResult)
     end, packageId)
 end)
 
 RegisterNUICallback("redeemTransaction", function(transactionId, cb)
-    lib.callback('pickle_tebexstore:redeemTransaction', false, function(success, reason)
+    lib.callback('pickle_store:redeemTransaction', false, function(success, reason)
         cb({
             success = success,
             statusText = reason,
@@ -88,25 +88,25 @@ RegisterNUICallback("purchaseCoinProduct", function(data, cb)
             clientFields[i] = additionalFields
         end
     end
-    TriggerServerEvent("pickle_tebexstore:purchaseProduct", productId, rawFields, clientFields)
+    TriggerServerEvent("pickle_store:purchaseProduct", productId, rawFields, clientFields)
 end)
 
 RegisterNUICallback("deleteProduct", function(productId, cb)
-    TriggerServerEvent("pickle_tebexstore:deleteProduct", productId)
+    TriggerServerEvent("pickle_store:deleteProduct", productId)
     cb(true)
 end)
 
 RegisterNUICallback("createProduct", function(data, cb)
-    TriggerServerEvent("pickle_tebexstore:createProduct", data)
+    TriggerServerEvent("pickle_store:createProduct", data)
     cb(true)
 end)
 
 RegisterNUICallback("spinWheel", function(data, cb)
-    TriggerServerEvent("pickle_tebexstore:spinWheel")
+    TriggerServerEvent("pickle_store:spinWheel")
     cb(true)
 end)
 
-RegisterNetEvent("pickle_tebexstore:setRedeemStatus", function(status)
+RegisterNetEvent("pickle_store:setRedeemStatus", function(status)
     SendNUIMessage({
         type = "setRedeemStatus",
         status = (status and {
@@ -119,11 +119,11 @@ RegisterNetEvent("pickle_tebexstore:setRedeemStatus", function(status)
     })
 end)
 
-RegisterNetEvent("pickle_tebexstore:updatePlayerCoins", function(coins)
+RegisterNetEvent("pickle_store:updatePlayerCoins", function(coins)
     UpdateCoins(coins)
 end)
 
-RegisterNetEvent("pickle_tebexstore:requestInfo", function(data)
+RegisterNetEvent("pickle_store:requestInfo", function(data)
     if (data.productInfo) then
         ProductInfo = data.productInfo 
     end
@@ -153,7 +153,7 @@ RegisterNetEvent("pickle_tebexstore:requestInfo", function(data)
     })
 end)
 
-RegisterNetEvent("pickle_tebexstore:startSpin", function(spins, nextSpinTime, prizeId)
+RegisterNetEvent("pickle_store:startSpin", function(spins, nextSpinTime, prizeId)
     SendNUIMessage({
         type = "spinWheel",
         spins = spins,
@@ -162,7 +162,7 @@ RegisterNetEvent("pickle_tebexstore:startSpin", function(spins, nextSpinTime, pr
     })
 end)
 
-RegisterNetEvent("pickle_tebexstore:openStore", function(products)
+RegisterNetEvent("pickle_store:openStore", function(products)
     TriggerScreenblurFadeIn(1000)
     SetNuiFocus(true, true)
     SendNUIMessage({

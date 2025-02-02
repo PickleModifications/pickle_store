@@ -160,7 +160,7 @@ CreateThread(function()
 
     Inventory.UpdateInventory = function(source)
         SetTimeout(1000, function()
-            TriggerClientEvent("pickle_tebexstore:updateInventory", source, Inventory.GetInventory(source))
+            TriggerClientEvent("pickle_store:updateInventory", source, Inventory.GetInventory(source))
         end)
     end
 
@@ -194,7 +194,7 @@ CreateThread(function()
         return (Inventory.GetItemCount(source, name) > 0)
     end
 
-    RegisterCallback("pickle_tebexstore:getInventory", function(source, cb)
+    RegisterCallback("pickle_store:getInventory", function(source, cb)
         cb(Inventory.GetInventory(source))
     end)
 

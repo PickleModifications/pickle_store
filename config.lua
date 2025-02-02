@@ -1,46 +1,24 @@
 Config = {}
-
 Config.Language = "en"
-
+-- REQUIRED TO CHANGE:
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
-
-Config.TebexStoreUrl = "https://unitingkingdomsrp.co.uk/" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
-
-Config.TebexApiKey = "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc" -- Your Tebex API key (NOT YOUR SECRET KEY, that's set on sv_tebexSecret in the server CFG). This is required for the store to function.
-
-Config.IdentifierPrefix = "license" -- Don't change this unless you are alright with all existing coin accounts being reset.
-
-Config.RequireDiscordIdentifier = true -- If true, the webstore will be non-interactable unless the user has a discord identifier. They will be instructed on this and how to fix it.
-
-Config.RequireFiveMIdentifier = true -- If true, the webstore will be non-interactable unless the user has a FiveM identifier. They will be instructed on this and how to fix it.
-
-Config.HeadlessTebexStore = true -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
-
-Config.InsertDefaultProducts = true -- If true, the default products will be inserted into the database on startup.
-
 Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.
-
+Config.TebexStoreUrl = "https://example.tebex.io" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
+Config.TebexApiKey = "CHANGE_THIS_KEY_NOW" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
+Config.IdentifierPrefix = "license" -- Don't change this unless you are alright with all existing coin accounts being reset.
+Config.HeadlessTebexStore = false -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
+Config.InsertDefaultProducts = true -- If true, the default products will be inserted into the database on startup.
 Config.StoreManagers = { -- These are the people that can manage the store and see the hidden products.
-    "discord:988962709691314276",
     "steam:EXAMPLE",
     "license:EXAMPLE",
     "fivem:EXAMPLE",
     "discord:EXAMPLE",
 }
-
-Config.HiddenPackages = {
-    --6661855,
-    --6661856,
-    --6661857,
-    --6661858,
-    --6661859,
-}
-
 Config.CoinCurrency = {
     singular = "Diamond",
     plural = "Diamonds",
     image = "images/diamonds.png",
-    packages = {
+    packages = { -- These are the coin package IDs on your tebex. Add coin packages at https://creator.tebex.io/packages
         6661855,
         6661856,
         6661857,
@@ -48,7 +26,7 @@ Config.CoinCurrency = {
         6661859,
     }
 }
-
+-- RECCOMENDED TO CHANGE:
 Config.DailySpin = {
     cooldown = 86400, -- 24 hours in seconds.
     prizes = { -- Make sure the chances add up to 100%
@@ -102,8 +80,15 @@ Config.DailySpin = {
         },
     }
 }
-
-Config.CustomPages = {
+-- OPTIONAL TO CHANGE:
+Config.HiddenPackages = { -- These are the packages that are hidden from the store. Coin packages are automatically added here.
+    --6661855,
+    --6661856,
+    --6661857,
+    --6661858,
+    --6661859,
+}
+Config.CustomPages = { -- These are the custom pages that can be accessed from the store.
     {
         label = "Terms of Service",
         content = [[
@@ -124,15 +109,14 @@ Config.CustomPages = {
         ]]
     }
 }
-
-Config.Advertisements = {
+Config.Advertisements = { -- These are the advertisements that will be displayed in the game.
     {
         interval = "*/5 * * * *", -- See more about cron format at: https://crontab.guru/
         message = "Need more coins? Visit the store by doing /store in the chat."
     },
 }
-
-Config.CustomCommands = {
+-- NO TOUCHING BELOW THIS LINE UNLESS YOU ACCEPT THAT SUPPORT WILL NOT BE GIVEN FOR MODIFICATIONS BELOW THIS LINE.
+Config.CustomCommands = { -- These are the custom commands you can create, modify and delete. These are used in coin packages, as well as
     ["pts_plate"] = {
         label = "Change Plate", -- This will display on top of the purchase button if fields are required.
         commandParameters = "", -- This is the format of the command parameters that added to a coin product. {model} in this case would support pts_givecar adder as an example.
@@ -151,7 +135,6 @@ Config.CustomCommands = {
             return true, "success", {currentPlate = plate}
         end,
         purchaseCheckServer = function(fields)
-            print(json.encode(fields))
             if not fields.plate or fields.plate == "" or string.len(fields.plate) > 8 then return false, "Invalid plate text, make sure it's under 8 characters." end
             if not fields.source then return false, "Invalid fields for pts_plate." end
             local result = GetOwnedVehicleFromPlate(fields.plate)
