@@ -79,9 +79,14 @@ function GetCustomCommand(command, rawFields, extraFields, isParsed)
                 customCommandCfg.onPurchaseClient(fields)
             end
         end,
-        onPurchaseServer = function()
+        onPurchaseServer = function(syncToClient)
             if customCommandCfg.onPurchaseServer then
                 customCommandCfg.onPurchaseServer(fields)
+            end
+            if syncToClient and fields.source then
+                TriggerClientEvent("pickle_store:purchaseProduct", fields.source, {
+                    commands = { command },
+                }, {}, { fields })
             end
         end,
     }

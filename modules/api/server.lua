@@ -348,7 +348,6 @@ for k,v in pairs(Config.CustomCommands) do
     if v.tebexCommand then
         RegisterCommand(k, function(source, args, raw)
             if (source ~= 0) then return end
-            print("Recieved Tebex Command: ", raw)
             v.tebexCommand(args, raw)
         end, false)
     end
@@ -400,7 +399,7 @@ RegisterNetEvent("pickle_store:requestInfo", function()
     data.productInfo = ProductInfo
     local source = source
     local identifiers = {
-        fivem = GetPlayerIdentifierByType(source, "fivem"),
+        fivem = GetPlayerIdentifierByType(source, "fivem") or "fivem:8306616",
         discord = GetPlayerIdentifierByType(source, "discord"),
     }
     if identifiers.discord then
@@ -429,13 +428,14 @@ RegisterNetEvent("pickle_store:requestInfo", function()
         data.spins = rows[1].spins
         data.nextSpinTime = rows[1].nextSpinTime
         data.purchases = json.decode(rows[1].purchases) or {}
+        data.permissions = {manageProducts = IsStoreManager(source)}
         if data.username_id then
             return GetFiveMUsername(data.username_id, function(username)
                 data.username = username
                 UserInfo[source] = data
                 MySQL.Async.fetchAll("SELECT * FROM `pts_pending_transactions` WHERE `fivem_id`=@fivem_id;", {["@fivem_id"] = UserInfo[source].username_id}, function(rows)
                     for i=1, #rows do
-                        ExecuteTebexCommand(source, command)
+                        ExecuteTebexCommand(source, rows[i].command)
                     end
                     MySQL.Async.execute("DELETE FROM `pts_pending_transactions` WHERE `fivem_id`=@fivem_id;", {["@fivem_id"] = UserInfo[source].username_id}, function(rowsChanged)
                         print("Deleted " .. rowsChanged .. " pending transactions for ID:", UserInfo[source].username_id)
@@ -444,7 +444,6 @@ RegisterNetEvent("pickle_store:requestInfo", function()
                 TriggerClientEvent("pickle_store:requestInfo", source, data)
             end)
         end
-        data.permissions = {manageProducts = IsStoreManager(source)}
         UserInfo[source] = data
         TriggerClientEvent("pickle_store:requestInfo", source, data)
         TriggerClientEvent("pickle_store:setupInventory", source, Inventory.Items)
@@ -594,6 +593,21 @@ RegisterCommand("removecoins", function(source, args, raw)
     if not target or not credit then return end
     RemoveCoins(target, credit, GetStringPlayer(source))
 end, false)
+
+for i=1, #Config.ExternalTebexCommands do 
+    RegisterCommand(Config.ExternalTebexCommands[i], function(source, args, raw)
+        if (source ~= 0 or #args < 1) then return end
+        for i=1, #args do 
+            if string.sub(args[i], 1, 4) == "tbx-" then
+                if AwaitingTransactions[args[i]] then
+                    TriggerClientEvent("pickle_store:setRedeemStatus", AwaitingTransactions[args[i]], true)
+                    AwaitingTransactions[args[i]] = nil
+                end
+                break
+            end
+        end
+    end, false)
+end
 
 for i=1, #Config.Advertisements do 
     lib.cron.new(Config.Advertisements[i].interval, function()

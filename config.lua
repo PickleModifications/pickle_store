@@ -3,12 +3,13 @@ Config.Language = "en"
 -- REQUIRED TO CHANGE:
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
 Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.
-Config.TebexStoreUrl = "https://example.tebex.io" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
-Config.TebexApiKey = "CHANGE_THIS_KEY_NOW" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
+Config.TebexStoreUrl = "https://unitingkingdomsrp.co.uk" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
+Config.TebexApiKey = "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
 Config.IdentifierPrefix = "license" -- Don't change this unless you are alright with all existing coin accounts being reset.
-Config.HeadlessTebexStore = false -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
+Config.HeadlessTebexStore = true -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
 Config.InsertDefaultProducts = true -- If true, the default products will be inserted into the database on startup.
 Config.StoreManagers = { -- These are the people that can manage the store and see the hidden products.
+    "discord:988962709691314276",
     "steam:EXAMPLE",
     "license:EXAMPLE",
     "fivem:EXAMPLE",
@@ -115,6 +116,11 @@ Config.Advertisements = { -- These are the advertisements that will be displayed
         message = "Need more coins? Visit the store by doing /store in the chat."
     },
 }
+Config.ExternalTebexCommands = {
+    -- These are commands that when redeemed, will inform the user when the package's commands have been ran.
+    -- You DO NOT need to do this, only if you want to inform the user when their order's package has sent the commands you list here.
+    "add_character_slot", -- This is used as the example tebex package in the video! Doesn't have any function.
+}
 -- NO TOUCHING BELOW THIS LINE UNLESS YOU ACCEPT THAT SUPPORT WILL NOT BE GIVEN FOR MODIFICATIONS BELOW THIS LINE.
 Config.CustomCommands = { -- These are the custom commands you can create, modify and delete. These are used in coin packages, as well as
     ["pts_plate"] = {
@@ -208,6 +214,29 @@ Config.CustomCommands = { -- These are the custom commands you can create, modif
             ShowNotification(tonumber(source), "You have received a vehicle in your garage with the plate " .. plate .. "!")
             AddOwnedVehicle(tonumber(source), plate, model)
         end,
+        tebexCommand = function(args, raw)
+            local transactionId = args[1]
+            local fivemId = args[2]
+            if tonumber(args[1]) then 
+                local command = GetCustomCommand("pts_givecar", {}, {
+                    productId = "tebex-transaction",
+                    source = tonumber(args[1]),
+                    model = args[2],
+                })
+                if command and command.onPurchaseServer then
+                    command.onPurchaseServer(true)
+                end
+            else
+                if not transactionId or tonumber(transactionId) then return end
+                -- Give to player offline.
+                local transactionId = args[1]
+                local usernameId = tonumber(args[2]) or nil
+                local model = args[3]
+                if not transactionId or not model then print("Invalid args for pts_givecar (tebex):", transactionId, credit) return end
+                local redeemCommand = "pts_givecar {pts_server_id} " .. model
+                ProcessTebexCommand(transactionId, usernameId, redeemCommand)
+            end
+        end
     },
     ["pts_giveitem"] = {
         label = "Give Item", -- This will display on top of the purchase button if fields are required.
@@ -222,6 +251,31 @@ Config.CustomCommands = { -- These are the custom commands you can create, modif
             ShowNotification(tonumber(fields.source), "You have received x" .. fields.count .. " " .. GetItemLabel(fields.name) .. "!")
             Inventory.AddItem(tonumber(fields.source), fields.name, tonumber(fields.count))
         end,
+        tebexCommand = function(args, raw)
+            local transactionId = args[1]
+            local fivemId = args[2]
+            if tonumber(args[1]) then 
+                local command = GetCustomCommand("pts_giveitem", {}, {
+                    productId = "tebex-transaction",
+                    source = tonumber(args[1]),
+                    name = args[2],
+                    count = tonumber(args[3]),
+                })
+                if command and command.onPurchaseServer then
+                    command.onPurchaseServer(true)
+                end
+            else
+                if not transactionId or tonumber(transactionId) then return end
+                -- Give to player offline.
+                local transactionId = args[1]
+                local usernameId = tonumber(args[2]) or nil
+                local name = args[3]
+                local amount = tonumber(args[4])
+                if not transactionId or not name or not amount then print("Invalid args for pts_giveitem (tebex):", transactionId, credit) return end
+                local redeemCommand = "pts_giveitem {pts_server_id} " .. name .. " " .. amount
+                ProcessTebexCommand(transactionId, usernameId, redeemCommand)
+            end
+        end
     },
     ["pts_givecoins"] = {
         label = "Add Coins", -- This will display on top of the purchase button if fields are required.
@@ -240,7 +294,7 @@ Config.CustomCommands = { -- These are the custom commands you can create, modif
                 local credit = tonumber(args[2])
                 if not target or not credit then print("Invalid args for pts_givecoins (game):", target, credit) return end
                 AddCoins(target, credit)
-                ShowNotification(target, "You have received " .. fields.count .. " " .. Config.CoinCurrency.plural .. "!")
+                ShowNotification(target, "You have received " .. credit .. " " .. Config.CoinCurrency.plural .. "!")
             else
                 if not transactionId or tonumber(transactionId) then return end
                 -- Give to player offline.
@@ -269,5 +323,30 @@ Config.CustomCommands = { -- These are the custom commands you can create, modif
             local job = GetPlayerJob(source)
             ShowNotification(tonumber(fields.source), "You have been set to " .. job.label .. " " .. job.rank_label .. "!")
         end,
+        tebexCommand = function(args, raw)
+            local transactionId = args[1]
+            local fivemId = args[2]
+            if tonumber(args[1]) then 
+                local command = GetCustomCommand("pts_setjob", {}, {
+                    productId = "tebex-transaction",
+                    source = tonumber(args[1]),
+                    name = args[2],
+                    rank = args[3] or 0,
+                })
+                if command and command.onPurchaseServer then
+                    command.onPurchaseServer(true)
+                end
+            else
+                if not transactionId or tonumber(transactionId) then return end
+                -- Give to player offline.
+                local transactionId = args[1]
+                local usernameId = tonumber(args[2]) or nil
+                local jobname = args[3]
+                local rank = tonumber(args[4]) or 0
+                if not transactionId or not jobname then print("Invalid args for pts_setjob (tebex):", transactionId, credit) return end
+                local redeemCommand = "pts_setjob {pts_server_id} " .. jobname .. " " .. rank
+                ProcessTebexCommand(transactionId, usernameId, redeemCommand)
+            end
+        end
     },
 }
