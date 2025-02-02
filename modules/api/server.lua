@@ -399,7 +399,7 @@ RegisterNetEvent("pickle_store:requestInfo", function()
     data.productInfo = ProductInfo
     local source = source
     local identifiers = {
-        fivem = GetPlayerIdentifierByType(source, "fivem") or "fivem:8306616",
+        fivem = GetPlayerIdentifierByType(source, "fivem"),
         discord = GetPlayerIdentifierByType(source, "discord"),
     }
     if identifiers.discord then

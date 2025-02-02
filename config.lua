@@ -3,8 +3,8 @@ Config.Language = "en"
 -- REQUIRED TO CHANGE:
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
 Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.
-Config.TebexStoreUrl = "https://unitingkingdomsrp.co.uk" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
-Config.TebexApiKey = "m5vg-e7dd2f9f5cc5d7b06adc7d360d0312c5ce3560cc" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
+Config.TebexStoreUrl = "SET_URL_HERE" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
+Config.TebexApiKey = "SET_PUBLIC_KEY_HERE" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
 Config.IdentifierPrefix = "license" -- Don't change this unless you are alright with all existing coin accounts being reset.
 Config.HeadlessTebexStore = true -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
 Config.InsertDefaultProducts = true -- If true, the default products will be inserted into the database on startup.
