@@ -5,7 +5,7 @@ function RunDebugEvents() {
         type: "setConfig",
         config: {
             theme: "midnight",
-            tebexApiKey: "qtt5-df22b144597b28245dc950be6324f09c83e6db02",
+            tebexApiKey: "EXAMPLE_API_KEY",
             image: "nui/src/assets/logo.png",
             customPages: [],
             coins: 25,
