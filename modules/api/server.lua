@@ -3,6 +3,16 @@ local AwaitingTransactions = {}
 local RedeemingUsers = {}
 local PerformingAction = {}
 
+function GetPlayerPrefixIdentifier(source)
+    local prefix = Config.IdentifierPrefix
+    local identifiers = GetPlayerIdentifiers(source)
+    for i=1, #identifiers do
+        if string.match(identifiers[i], prefix) then
+            return identifiers[i]
+        end
+    end
+end
+
 function GenerateProductId()
     local id = nil
     repeat
@@ -26,7 +36,7 @@ end
 
 function ExecuteTebexCommand(source, command)
     local command = GetCommandReplaced(source, command)
-    print("Executing tebex command: " .. command)
+    debugPrint("Executing tebex command: " .. command)
     ExecuteCommand(command)
 end
 
@@ -36,7 +46,7 @@ function AddTransactionCommand(transactionId, usernameId, redeemCommand)
         ["@fivem_id"] = usernameId,
         ["@command"] = redeemCommand,
     }, function(rowsChanged)
-        print("Added transaction command for: " .. transactionId, usernameId, redeemCommand)
+        debugPrint("Added transaction command for: " .. transactionId, usernameId, redeemCommand)
     end)
 end
 
@@ -67,13 +77,13 @@ function RedeemVerifiedTransaction(transactionId, source, rows)
         ExecuteTebexCommand(source, rows[i].command)
     end
     MySQL.Async.execute("DELETE FROM `pts_pending_transactions` WHERE `transaction_id`=@transaction_id;", {["@transaction_id"] = transactionId}, function(rowsChanged)
-        print("Deleted " .. rowsChanged .. " pending transactions for ID:", transactionId)
+        debugPrint("Deleted " .. rowsChanged .. " pending transactions for ID:", transactionId)
     end)
     MySQL.Async.execute("INSERT INTO `pts_redeemed_transactions` (`transaction_id`, `identifiers`) VALUES (@transaction_id, @identifiers)", {
         ["@transaction_id"] = transactionId,
         ["@identifiers"] = json.encode(GetPlayerIdentifiers(source)),
     }, function(rowsChanged)
-        print("Added redeemed transaction for: " .. transactionId, UserInfo[source].username_id)
+        debugPrint("Added redeemed transaction for: " .. transactionId, UserInfo[source].username_id)
     end)
 end
 
@@ -91,7 +101,7 @@ function RedeemTransaction(transactionId, source)
     local reason = "Unknown"
     PerformHttpRequest("https://plugin.tebex.io/payments/"..transactionId, function(statusCode, response, headers)
         if statusCode == 200 or statusCode == 201 then
-            print("Received response for transaction:", transactionId, json.encode(json.decode(response), { indent = true }))
+            debugPrint("Received response for transaction:", transactionId, json.encode(json.decode(response), { indent = true }))
             MySQL.Async.fetchAll("SELECT * FROM `pts_pending_transactions` WHERE `transaction_id`=@transaction_id;", {["@transaction_id"] = transactionId}, function(rows)
                 if #rows > 0 then
                     RedeemVerifiedTransaction(transactionId, source, rows)
@@ -145,9 +155,9 @@ function AddCoins(source, credit, origin)
     })
     MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins WHERE `identifier`=@identifier;", {
         ["@coins"] = userInfo.coins,
-        ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
+        ["@identifier"] = GetPlayerPrefixIdentifier(source),
     }, function(rowsChanged)
-        print("Added coins for " .. GetPlayerIdentifierByType(source, Config.IdentifierPrefix) .. " with " .. credit .. " coins.")
+        debugPrint("Added coins for " .. GetPlayerPrefixIdentifier(source) .. " with " .. credit .. " coins.")
         TriggerClientEvent("pickle_store:updatePlayerCoins", source, userInfo.coins)
     end)
 end
@@ -168,9 +178,9 @@ function RemoveCoins(source, credit, origin)
     end
     MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins WHERE `identifier`=@identifier;", {
         ["@coins"] = userInfo.coins,
-        ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
+        ["@identifier"] = GetPlayerPrefixIdentifier(source),
     }, function(rowsChanged)
-        print("Removed coins for " .. GetPlayerIdentifierByType(source, Config.IdentifierPrefix) .. " by " .. credit .. " coins.")
+        debugPrint("Removed coins for " .. GetPlayerPrefixIdentifier(source) .. " by " .. credit .. " coins.")
         TriggerClientEvent("pickle_store:updatePlayerCoins", source, userInfo.coins)
     end)
 end
@@ -233,12 +243,12 @@ function PurchaseProduct(source, productId, rawFields, clientFields)
         local command = GetCustomCommand(product.commands[i], rawFields[i], additionalFields)
         if command then
             if command.onPurchaseServer then
-                print("Custom coin command execution: " .. json.encode({name = command.name, fields = command.fields}))
+                debugPrint("Custom coin command execution: " .. json.encode({name = command.name, fields = command.fields}))
                 command.onPurchaseServer()
             end
         else
             local commandString = GetCommandReplaced(source, product.commands[i], {productId = productId})
-            print("Executing non-config coin command: " .. commandString)
+            debugPrint("Executing non-config coin command: " .. commandString)
             ExecuteCommand(commandString)
         end
     end
@@ -259,15 +269,15 @@ function UpdateUser(source)
         ["@coins"] = UserInfo[source].coins or 0,
         ["@spins"] = UserInfo[source].spins or 0,
         ["@nextSpinTime"] = UserInfo[source].nextSpinTime or 0,
-        ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
+        ["@identifier"] = GetPlayerPrefixIdentifier(source),
     }, function(rowsChanged)
-        print("Updated user with " .. rowsChanged .. " rows changed.")
+        debugPrint("Updated user with " .. rowsChanged .. " rows changed.")
     end)
 end
 
 function DeleteProduct(productId)
     MySQL.Async.execute("DELETE FROM `pts_products` WHERE `id`=@id;", {["@id"] = productId}, function(rowsChanged)
-        print("Deleted product with " .. rowsChanged .. " rows changed.")
+        debugPrint("Deleted product with " .. rowsChanged .. " rows changed.")
     end)
     ProductInfo[productId] = nil
     TriggerClientEvent("pickle_store:updateProducts", -1, ProductInfo)
@@ -285,7 +295,7 @@ function UpdateProduct(productId)
         ["@userLimit"] = ProductInfo[productId].userLimit,
         ["@commands"] = json.encode(ProductInfo[productId].commands),
     }, function(rowsChanged)
-        print("Updated product with " .. rowsChanged .. " rows changed.")
+        debugPrint("Updated product with " .. rowsChanged .. " rows changed.")
     end)
     TriggerClientEvent("pickle_store:updateProducts", -1, ProductInfo)
 end
@@ -344,13 +354,7 @@ function IsStoreManager(source)
     return false
 end
 
-for k,v in pairs(Config.CustomCommands) do 
-    if v.tebexCommand then
-        RegisterCommand(k, function(source, args, raw)
-            if (source ~= 0) then return end
-            v.tebexCommand(args, raw)
-        end, false)
-    end
+function ResyncPermissions()
 end
 
 lib.callback.register('pickle_store:getPurchaseUrl', function(source, packageId)
@@ -368,7 +372,7 @@ lib.callback.register('pickle_store:getPurchaseUrl', function(source, packageId)
             if statusCode == 200 or statusCode == 201 then
                 tebexResult.url = json.decode(response).url
             else
-                print("Request failed with status code: " .. statusCode)
+                debugPrint("Request failed with status code: " .. statusCode)
             end
         end, 'POST', json.encode({
             package_id = packageId,
@@ -396,7 +400,6 @@ RegisterNetEvent("pickle_store:requestInfo", function()
         return
     end
     local data = {}
-    data.productInfo = ProductInfo
     local source = source
     local identifiers = {
         fivem = GetPlayerIdentifierByType(source, "fivem"),
@@ -410,18 +413,18 @@ RegisterNetEvent("pickle_store:requestInfo", function()
         local str = string.gsub(identifiers.fivem, "fivem:", "")
         data.username_id = tonumber(str)
     end
-    MySQL.Async.fetchAll("SELECT * FROM `pts_users` WHERE `identifier`=@identifier;", {["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix)}, function(rows)
+    MySQL.Async.fetchAll("SELECT * FROM `pts_users` WHERE `identifier`=@identifier;", {["@identifier"] = GetPlayerPrefixIdentifier(source)}, function(rows)
         if #rows < 1 then
             rows[1] = { coins = 0, spins = 1, nextSpinTime = 0 }
             MySQL.Async.execute("INSERT IGNORE INTO `pts_users` (`identifier`, `fivem_id`, `discord_id`, `coins`, `spins`, `nextSpinTime`) VALUES (@identifier, @fivem_id, @discord_id, @coins, @spins, @nextSpinTime)", {
-                ["@identifier"] = GetPlayerIdentifierByType(source, Config.IdentifierPrefix),
+                ["@identifier"] = GetPlayerPrefixIdentifier(source),
                 ["@fivem_id"] = tostring(data.username_id),
                 ["@discord_id"] = tostring(data.discord_id),
                 ["@coins"] = 0,
                 ["@spins"] = 1,
                 ["@nextSpinTime"] = 0,
             }, function(rowsChanged)
-                print("Inserted new user with " .. rowsChanged .. " rows changed.")
+                debugPrint("Inserted new user with " .. rowsChanged .. " rows changed.")
             end)
         end
         data.coins = rows[1].coins
@@ -438,14 +441,14 @@ RegisterNetEvent("pickle_store:requestInfo", function()
                         ExecuteTebexCommand(source, rows[i].command)
                     end
                     MySQL.Async.execute("DELETE FROM `pts_pending_transactions` WHERE `fivem_id`=@fivem_id;", {["@fivem_id"] = UserInfo[source].username_id}, function(rowsChanged)
-                        print("Deleted " .. rowsChanged .. " pending transactions for ID:", UserInfo[source].username_id)
+                        debugPrint("Deleted " .. rowsChanged .. " pending transactions for ID:", UserInfo[source].username_id)
                     end)
                 end)
-                TriggerClientEvent("pickle_store:requestInfo", source, data)
+                TriggerClientEvent("pickle_store:requestInfo", source, data, ProductInfo)
             end)
         end
         UserInfo[source] = data
-        TriggerClientEvent("pickle_store:requestInfo", source, data)
+        TriggerClientEvent("pickle_store:requestInfo", source, data, ProductInfo)
         TriggerClientEvent("pickle_store:setupInventory", source, Inventory.Items)
     end)
 end)
@@ -492,7 +495,7 @@ RegisterNetEvent("pickle_store:createProduct", function(product)
         ["@userLimit"] = ProductInfo[id].userLimit,
         ["@commands"] = json.encode(ProductInfo[id].commands),
     }, function(rowsChanged)
-        print("Created product with " .. rowsChanged .. " rows changed.")
+        debugPrint("Created product with " .. rowsChanged .. " rows changed.")
     end)
     TriggerClientEvent("pickle_store:updateProducts", -1, ProductInfo)
 end)
@@ -544,12 +547,12 @@ RegisterNetEvent("pickle_store:spinWheel", function()
                 local command = GetCustomCommand(product.commands[i][1], product.commands[i][2], {productId = productId, source = source}, true)
                 if command then
                     if command.onPurchaseServer then
-                        print("Custom coin command execution (daily spin): " .. json.encode({name = command.name, fields = command.fields}))
+                        debugPrint("Custom coin command execution (daily spin): " .. json.encode({name = command.name, fields = command.fields}))
                         command.onPurchaseServer()
                     end
                 else
                     local commandString = GetCommandReplaced(source, product.commands[i][1], {productId = productId})
-                    print("Executing non-config coin command (daily spin): " .. commandString)
+                    debugPrint("Executing non-config coin command (daily spin): " .. commandString)
                     ExecuteCommand(commandString)
                 end
             end
@@ -615,18 +618,27 @@ for i=1, #Config.Advertisements do
     end)
 end
 
+for k,v in pairs(Config.CustomCommands) do 
+    if v.tebexCommand then
+        RegisterCommand(k, function(source, args, raw)
+            if (source ~= 0) then return end
+            v.tebexCommand(args, raw)
+        end, false)
+    end
+end
+
 MySQL.ready(function()
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_pending_transactions` (`id` INT PRIMARY KEY AUTO_INCREMENT, `transaction_id` VARCHAR(255), `fivem_id` INT, `command` LONGTEXT)", {}, function(rowsChanged)
-        if rowsChanged > 0 then print("Created table `pts_pending_transactions` with " .. rowsChanged .. " rows changed.") end
+        if rowsChanged > 0 then debugPrint("Created table `pts_pending_transactions` with " .. rowsChanged .. " rows changed.") end
     end)
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_redeemed_transactions` (`id` INT PRIMARY KEY AUTO_INCREMENT, `transaction_id` VARCHAR(255), `identifiers` LONGTEXT)", {}, function(rowsChanged)
-        if rowsChanged > 0 then print("Created table `pts_redeemed_transactions` with " .. rowsChanged .. " rows changed.") end
+        if rowsChanged > 0 then debugPrint("Created table `pts_redeemed_transactions` with " .. rowsChanged .. " rows changed.") end
     end)
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`identifier` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT, `spins` INT, `nextSpinTime` INT, `purchases` LONGTEXT)", {}, function(rowsChanged)
-        if rowsChanged > 0 then print("Created table `pts_users` with " .. rowsChanged .. " rows changed.") end
+        if rowsChanged > 0 then debugPrint("Created table `pts_users` with " .. rowsChanged .. " rows changed.") end
     end)
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_products` ( `id` VARCHAR(255) PRIMARY KEY, `title` varchar(255) NOT NULL, `description` longtext NOT NULL, `image` longtext NOT NULL, `coins` int(11) NOT NULL DEFAULT 0, `globalLimit` int(11) DEFAULT 0, `userLimit` int(11) DEFAULT 0, `category` longtext DEFAULT NULL, `commands` longtext DEFAULT NULL )", {}, function(rowsChanged)
-        if rowsChanged > 0 then print("Created table `pts_products` with " .. rowsChanged .. " rows changed.") end
+        if rowsChanged > 0 then debugPrint("Created table `pts_products` with " .. rowsChanged .. " rows changed.") end
         MySQL.Async.fetchAll("SELECT * FROM `pts_products`;", {}, function(rows)
             for i=1, #rows do
                 local id = (tonumber(rows[i].id) ~= nil and tonumber(rows[i].id) or rows[i].id)
@@ -655,7 +667,7 @@ MySQL.ready(function()
                     ('coin_1738461475_6122', 'Job - Paramedic', 'Become a paramedic today!', 'https://docs.fivem.net/peds/s_m_m_doctor_01.webp', 200, 0, 0, 'Jobs', '["pts_setjob ambulance 0"]'),
                     ('coin_1738462156_9043', 'Yacht (1-of-1 Exclusive) ', 'I think this yacht is pretty cool - and it can be yours and yours only!', 'https://docs.fivem.net/vehicles/marquis.webp', 25, 1, 0, 'Vehicles', '["pts_givecar marquis"]');
                 ]], {}, function(rowsChanged)
-                    print("Inserted default products with " .. rowsChanged .. " rows changed.")
+                    debugPrint("Inserted default products with " .. rowsChanged .. " rows changed.")
                     MySQL.Async.fetchAll("SELECT * FROM `pts_products`;", {}, function(rows)
                         for i=1, #rows do
                             local id = (tonumber(rows[i].id) ~= nil and tonumber(rows[i].id) or rows[i].id)

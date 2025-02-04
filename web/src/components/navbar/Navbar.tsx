@@ -130,7 +130,7 @@ export default function Navbar({pages, onPageSelect} : {pages: {label: string, c
                                       AddPackageToCart(
                                         userState.ident, 
                                         configState.tebexApiKey, 
-                                        userState.discord?.id, 
+                                        configState.discord_id, 
                                         option.id, 
                                         product.name + " (" + option.name + ")", 
                                         configState.tebexStoreUrl,

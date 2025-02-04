@@ -52,7 +52,7 @@ export type Product = {
     commands: string[]
 }
   
-export function AddPackageToCart(ident: string, tebexApiKey: string, discord: string | undefined, packageId: number, name: string, fallbackLink: string, cb: (message: string) => void) {
+export function AddPackageToCart(ident: string, tebexApiKey: string, discord: string | number | null | undefined, packageId: number, name: string, fallbackLink: string, cb: (message: string) => void) {
     fetchNui("purchaseProduct", packageId).then((tebexResult: any) => {
         const tebexBuyUrl = tebexResult.url;
         const directCheckout = tebexResult.directCheckout;
@@ -77,6 +77,7 @@ export function AddPackageToCart(ident: string, tebexApiKey: string, discord: st
                         const url = new URL(req.url);
                         const basketId = url.searchParams.get("basket");
                         if (basketId) {
+                            console.log("DSL:", discord)
                             await performCartAction(basketId, tebexApiKey, packageId, undefined, discord);
                             (window as any).invokeNative('openUrl', "https://pay.tebex.io/" + basketId);
                         }
@@ -355,6 +356,11 @@ export function ProductCard({ product }: { product: Product }) {
                                 </>
                             )}
                         </div>)}
+                        {(product.globalLimit && product.globalLimit > 0) ? (<div style={{paddingBottom: 2}} className="absolute top-0 right-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-5">
+                            <div style={{paddingTop: 2, paddingBottom: 1}} className="flex flex-row items-center gap-1">
+                                <span className="text-sm font-semibold">{product.globalLimit} In-Stock</span> 
+                            </div>
+                        </div>) : null}
                     </div>
                 </DialogTrigger>
                 <DialogContent>
@@ -465,7 +471,7 @@ export function ProductCard({ product }: { product: Product }) {
                                                         <div className="text-md text-muted-foreground">Please wait 3-5 seconds for the checkout window to open.</div>
                                                         </div>
                                                     )
-                                                    AddPackageToCart(userState.ident, configState.tebexApiKey, userState.discord?.id, option.id, product.name + " (" + option.name + ")", configState.tebexStoreUrl, (message) => {
+                                                    AddPackageToCart(userState.ident, configState.tebexApiKey, configState.discord_id, option.id, product.name + " (" + option.name + ")", configState.tebexStoreUrl, (message) => {
                                                         setLoading();
                                                     })
                                                 }}>{option.name}: {
@@ -527,7 +533,7 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
             }
         }
         for (const configProduct of configState.productInfo || []) {
-            let targetCategory = "all_coins";
+            let targetCategory = "all";
             if (!isProductHidden(configProduct.id, configState.hiddenProducts)) {
                 if (configProduct.category) {
                     targetCategory = configProduct.category;

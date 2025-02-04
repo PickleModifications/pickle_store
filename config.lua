@@ -1,15 +1,15 @@
 Config = {}
 Config.Language = "en"
+Config.Debug = false -- This enables debugging prints.
 -- REQUIRED TO CHANGE:
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
 Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.
 Config.TebexStoreUrl = "SET_URL_HERE" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
 Config.TebexApiKey = "SET_PUBLIC_KEY_HERE" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
-Config.IdentifierPrefix = "license" -- Don't change this unless you are alright with all existing coin accounts being reset.
-Config.HeadlessTebexStore = true -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
+Config.IdentifierPrefix = "license2" -- Don't change this unless you are alright with all existing coin accounts being reset.
+Config.HeadlessTebexStore = false -- This should only be true if your tebex template is forcibly redirected to an external website (headless). This will return any checkout basket URL to the store URL.
 Config.InsertDefaultProducts = true -- If true, the default products will be inserted into the database on startup.
 Config.StoreManagers = { -- These are the people that can manage the store and see the hidden products.
-    "discord:988962709691314276",
     "steam:EXAMPLE",
     "license:EXAMPLE",
     "fivem:EXAMPLE",

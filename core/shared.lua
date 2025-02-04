@@ -11,7 +11,7 @@ function GetRandomInt(min, max, exclude)
     end
 end
 
-function dprint(...)
+function debugPrint(...)
     if Config.Debug then
         print(...)
     end

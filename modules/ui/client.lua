@@ -123,9 +123,9 @@ RegisterNetEvent("pickle_store:updatePlayerCoins", function(coins)
     UpdateCoins(coins)
 end)
 
-RegisterNetEvent("pickle_store:requestInfo", function(data)
-    if (data.productInfo) then
-        ProductInfo = data.productInfo 
+RegisterNetEvent("pickle_store:requestInfo", function(data, productInfo)
+    if (productInfo) then
+        ProductInfo = productInfo 
     end
     LOCAL_DATA = data
     SendNUIMessage({

@@ -6,9 +6,6 @@ function UpdateCoins(coins)
     })
 end
 
-function ResyncPermissions()
-end
-
 RegisterNetEvent("pickle_store:purchaseProduct", function(productId, commandArgs, clientArgs)
     local product = (type(productId) == "table" and productId or ProductInfo[productId])
     if not product then return end
