@@ -7,10 +7,17 @@ function GetPlayerPrefixIdentifier(source)
     local prefix = Config.IdentifierPrefix
     local identifiers = GetPlayerIdentifiers(source)
     for i=1, #identifiers do
-        if string.match(identifiers[i], prefix) then
+        if string.match(identifiers[i], prefix .. ":") then
             return identifiers[i]
         end
     end
+    if prefix == "license2" then
+        for i=1, #identifiers do
+            if string.match(identifiers[i], "license:") then
+                return identifiers[i]
+            end
+        end
+    end  
 end
 
 function GenerateProductId()
