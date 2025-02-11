@@ -4,6 +4,8 @@ local RedeemingUsers = {}
 local PerformingAction = {}
 
 function GetPlayerPrefixIdentifier(source)
+    local source = tonumber(source)
+    if not source then return end
     local prefix = Config.IdentifierPrefix
     local identifiers = GetPlayerIdentifiers(source)
     for i=1, #identifiers do
@@ -568,6 +570,13 @@ RegisterNetEvent("pickle_store:spinWheel", function()
     end
 end)
 
+AddEventHandler("onPlayerDropped", function(reason)
+    local source = source
+    if UserInfo[source] then
+        UserInfo[source] = nil
+    end
+end)
+
 RegisterCommand("redeem", function(source, args, raw)
     local transactionId = args[1]
     local success, reason = RedeemTransaction(transactionId, source)
@@ -589,9 +598,10 @@ end, false)
 RegisterCommand("givecoins", function(source, args, raw)
     if not IsStoreManager(source) then return ShowNotification(source, _L("no_permission")) end
     if #args < 2 then return ShowNotification(source, "Usage: /givecoins id amount") end
-    local target = args[1] == "me" and source or GetPlayerFromFiveMId(tonumber(args[1]))
+    local target = args[1] == "me" and source or tonumber(args[1])
     local credit = tonumber(args[2])
     if not target or not credit then return end
+    ShowNotification(source, "You have given " .. credit .. " coins to " .. GetPlayerName(target))
     AddCoins(target, credit, GetStringPlayer(source))
 end, false)
 
@@ -628,6 +638,7 @@ end
 for k,v in pairs(Config.CustomCommands) do 
     if v.tebexCommand then
         RegisterCommand(k, function(source, args, raw)
+            debugPrint("TEBEX COMMAND EXECUTED: ", source, json.encode(args))
             if (source ~= 0) then return end
             v.tebexCommand(args, raw)
         end, false)
