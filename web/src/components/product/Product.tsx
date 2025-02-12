@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Image from "@/components/image"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -20,6 +20,7 @@ import { Config, useConfig } from "@/providers/config";
 import { fetchNui } from "@/providers/nui/fetchNui";
 import { useLoading } from "@/providers/loading";
 import { Edit, PlusIcon, Save, Trash, Trash2 } from "lucide-react";
+import { Virtuoso, VirtuosoGrid } from "react-virtuoso";
 
 export type ProductOption = {
     id: number
@@ -51,7 +52,10 @@ export type Product = {
     groups: string[]
     commands: string[]
 }
-  
+
+async function fetchTebexUrl(url: string) {
+    return fetch(url, {mode: 'no-cors'}).then((res) => res.url).catch(() => null);
+}
 export function AddPackageToCart(ident: string, tebexApiKey: string, discord: string | number | null | undefined, packageId: number, name: string, fallbackLink: string, cb: (message: string) => void) {
     fetchNui("purchaseProduct", packageId).then((tebexResult: any) => {
         const tebexBuyUrl = tebexResult.url;
@@ -77,7 +81,6 @@ export function AddPackageToCart(ident: string, tebexApiKey: string, discord: st
                         const url = new URL(req.url);
                         const basketId = url.searchParams.get("basket");
                         if (basketId) {
-                            console.log("DSL:", discord)
                             await performCartAction(basketId, tebexApiKey, packageId, undefined, discord);
                             (window as any).invokeNative('openUrl', "https://pay.tebex.io/" + basketId);
                         }
@@ -312,7 +315,6 @@ export function ProductCard({ product }: { product: Product }) {
     const {toast} = useToast();
     const [userState, setUserState] = useState<User | null>(null);
     const [configState, setConfigState] = useState(config);
-    const [thumbnailLoaded, setThumbnailLoaded] = useState(false);
     const {setLoading} = useLoading();
     const [editState, setEditState] = useState<EditState | null>(null);
     const data = getCategorizedProducts(userState, configState);
@@ -321,27 +323,21 @@ export function ProductCard({ product }: { product: Product }) {
     let commandsListed: { [key: string]: number } = {};
     useEffect(() => { setUserState(user) }, [user]);
     useEffect(() => { setConfigState(config) }, [config]);
-    useEffect(() => {
-        if (thumbnailLoaded) { return }
-        setThumbnailLoaded(true);
-    }, []);
     return (
         <Dialog onOpenChange={(open) => {
                 if (!open) {
-                    setTimeout(() => {
-                        setEditState(null);
-                    }, 200);
+                    setEditState(null);
                 }
             }}>
-                <DialogTrigger>
-                    <div className="bg-muted rounded-md animate-appear relative select-none cursor-pointer filter brightness-80 hover:brightness-125 hover:scale-90 hover:z-1 z-0 scale-100 transition ease-in duration-200">
+                <DialogTrigger className="w-full">
+                    <div className="w-full bg-muted rounded-md animate-appear relative select-none cursor-pointer filter brightness-80 hover:brightness-125 hover:scale-90 hover:z-1 z-0 scale-100 transition ease-in duration-200">
                         <AspectRatio className="flex items-center justify-center" ratio={16 / 9}>
                             <img style={{height: "fit-content"}} className="rounded-md max-h-full" src={product.image} alt=""/>
                             <div className="absolute bottom-0 left-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-75">
                                 <span className="text-sm font-semibold">{product.name}</span>
                             </div>
                         </AspectRatio>
-                        {thumbnailLoaded && (<div style={{paddingBottom: 2}} className="absolute top-0 left-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-5">
+                        <div style={{paddingBottom: 2}} className="absolute top-0 left-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-5">
                             {product.isCoinPackage ? (
                                 <div style={{paddingTop: 2, paddingBottom: 1}} className="flex flex-row items-center gap-1">
                                     <img className="w-4 h-4 rounded-sm" src={configState.coinCurrency?.image} alt=""/>
@@ -355,7 +351,7 @@ export function ProductCard({ product }: { product: Product }) {
                                     <span className="text-sm font-semibold">{getPriceString(product.base_price, product.type, product.currency)}</span>
                                 </>
                             )}
-                        </div>)}
+                        </div>
                         {(product.globalLimit && product.globalLimit > 0) ? (<div style={{paddingBottom: 2}} className="absolute top-0 right-0 m-2 pl-2 pr-2 bg-background rounded-xl bg-opacity-5">
                             <div style={{paddingTop: 2, paddingBottom: 1}} className="flex flex-row items-center gap-1">
                                 <span className="text-sm font-semibold">{product.globalLimit} In-Stock</span> 
@@ -585,6 +581,36 @@ function getCategorizedProducts(userState: User | null, configState: Config) {
     }
     return { categories, categoriesOrder };
 }
+const gridComponents = {
+    List: forwardRef(({ style, children, ...props }, ref) => (
+      <div
+        ref={ref}
+        {...props}
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          ...style,
+        }}
+      >
+        {children}
+      </div>
+    )),
+    Item: ({ children, ...props }) => (
+      <div
+        {...props}
+        style={{
+          padding: "0.5rem",
+          width: "25%",
+          display: "flex",
+          flex: "none",
+          alignContent: "stretch",
+          boxSizing: "border-box",
+        }}
+      >
+        {children}
+      </div>
+    ),
+}
 
 export function Products() {
     const {config} = useConfig();
@@ -594,12 +620,13 @@ export function Products() {
     useEffect(() => { setConfigState(config) }, [config]);
     useEffect(() => { setUserState(user) }, [user]);
     const [newProductState, setNewProductState] = useState<EditState | null>(null);
-    const [currentTab, setCurrentTab] = useState("all");
     let data = getCategorizedProducts(userState, configState);
     let categories = data.categories;
     let categoriesOrder = data.categoriesOrder;
-    if (currentTab != "all" && (!categories[currentTab] || categories[currentTab].products.length == 0)) { 
-        setCurrentTab("all");
+    const [currentTab, setCurrentTab] = useState("all");
+
+    if (currentTab == "all" && configState.disableAllProducts && !configState.permissions.manageProducts && categoriesOrder.length > 1) {
+        setCurrentTab(categoriesOrder[1]);
     }
     return (
         <>
@@ -608,6 +635,48 @@ export function Products() {
                     <div className="animate-appear text-2xl font-semibold text-center">Products</div>
                     <div className="text-muted-foreground text-sm text-center">Over {(categories["all"] ? categories["all"].products.length : 0)}+ products to choose from, check them out!</div>
                 </div>
+                {configState.permissions.manageProducts && (
+                    <Dialog open={newProductState != null} onOpenChange={(open) => {
+                        if (!open) {
+                            setNewProductState(null);
+                        }
+                    }}>
+                            <DialogTrigger>
+                                <div className="flex flex-row gap-2 items-center w-full">
+                                    <Button className="w-full" variant="secondary" onClick={() => {
+                                        setNewProductState({
+                                            id: -1,
+                                            globalLimit: 0,
+                                            userLimit: 0,
+                                            isCreating: true,
+                                            name: "",
+                                            description: "",
+                                            image: "",
+                                            category: "",
+                                            videoUrl: "",
+                                            base_price: 0,
+                                            currency: "USD",
+                                            discount: 0,
+                                            productOptions: [],
+                                            groups: [],
+                                            selectedCategory: "all",
+                                            commands: [],
+                                        });
+                                    }}>
+                                        <PlusIcon size={16}/> Add Product
+                                    </Button>
+                                </div>
+                            </DialogTrigger>
+                            <DialogContent>
+                            <DialogHeader  style={{minWidth: 400}}>
+                                {newProductState && (
+                                    <ProductManagement product={newProductState} setProduct={setNewProductState} />
+                                )}
+                                <DialogDescription className="hidden"/>
+                            </DialogHeader>
+                            </DialogContent>
+                    </Dialog>
+                )}
                 <Tabs value={currentTab} onValueChange={(value: string) => {
                     if (!categories[value] || categories[value].products.length == 0) { 
                         setCurrentTab("all");
@@ -615,11 +684,11 @@ export function Products() {
                     else {
                         setCurrentTab(value);
                     }
-                }} defaultValue="all">
+                }} defaultValue={"all"}>
                 <div style={{height: 36}} className="relative rounded-sm sm:overflow-x-auto overflow-x-scroll bg-muted">
                     <TabsList className="absolute flex flex-row justify-stretch w-full select-none">
                         {categoriesOrder.map((category) => (
-                            categories[category] && (
+                            ((category != "all" || (!configState.disableAllProducts || configState.permissions.manageProducts)) && categories[category]) && (
                                 <TabsTrigger className="w-full rounded-sm" key={category} value={category}>
                                     {categories[category].label}
                                 </TabsTrigger>
@@ -627,57 +696,24 @@ export function Products() {
                         ))}
                     </TabsList>
                 </div>
-                    {categoriesOrder.map((category) => {
-                        if (!categories[category as keyof typeof categories]) { return null }
-                        return (
-                            <TabsContent key={category} value={category}>
-                                {configState.permissions.manageProducts && (
-                                    <Dialog open={newProductState != null}>
-                                            <DialogTrigger>
-                                                <div className="flex flex-row gap-2 pt-2 items-center w-full">
-                                                    <Button className="w-full" variant="secondary" onClick={() => {
-                                                        setNewProductState({
-                                                            id: -1,
-                                                            globalLimit: 0,
-                                                            userLimit: 0,
-                                                            isCreating: true,
-                                                            name: "",
-                                                            description: "",
-                                                            image: "",
-                                                            category: "",
-                                                            videoUrl: "",
-                                                            base_price: 0,
-                                                            currency: "USD",
-                                                            discount: 0,
-                                                            productOptions: [],
-                                                            groups: [],
-                                                            selectedCategory: "all",
-                                                            commands: [],
-                                                        });
-                                                    }}>
-                                                        <PlusIcon size={16}/> Add Product
-                                                    </Button>
-                                                </div>
-                                            </DialogTrigger>
-                                            <DialogContent>
-                                            <DialogHeader  style={{minWidth: 400}}>
-                                                {newProductState && (
-                                                    <ProductManagement product={newProductState} setProduct={setNewProductState} />
-                                                )}
-                                                <DialogDescription className="hidden"/>
-                                            </DialogHeader>
-                                            </DialogContent>
-                                    </Dialog>
-                                )}
-                                <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                    {categories[category].products.map((product) => (
-                                        <ProductCard key={product.id} product={product} />
-                                    ))}
-                                </div>
-                            </TabsContent>
-                        )
-                    })}
+
                 </Tabs>
+                
+                {Object.keys(categories).map((category) => (
+                    category == currentTab && (
+                        <VirtuosoGrid
+                            style={{width: "100%", height: configState.permissions.manageProducts ? "460px" : "510px"}}
+                            components={gridComponents}
+                            totalCount={categories[category].products.length}
+                            itemContent={(index) => {
+                                const product = categories[category].products[index];
+                                return (
+                                    <ProductCard key={product.id} product={product} />
+                                );
+                            }}
+                        />
+                    )
+                ))}
             </div>
 
         </>

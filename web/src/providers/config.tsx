@@ -40,6 +40,7 @@ type WheelPrize = {
 }
 
 export type Config = {
+    disableAllProducts: boolean;
     theme: string;
     tebexApiKey: string;
     tebexStoreUrl: string;
@@ -82,6 +83,7 @@ interface ConfigProviderProps {
 export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
     const {theme, setTheme} = useTheme();
     const [config, setConfig] = useState<Config>({
+        disableAllProducts: false,
         theme: "dark",
         tebexBuyUrl: undefined,
         productInfo: [],

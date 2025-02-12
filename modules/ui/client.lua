@@ -131,6 +131,7 @@ RegisterNetEvent("pickle_store:requestInfo", function(data, productInfo)
     SendNUIMessage({
         type = "setConfig",
         config = {
+            disableAllProducts = Config.DisableAllProductsCategory,
             theme = Config.Theme,
             tebexStoreUrl = Config.TebexStoreUrl,
             tebexApiKey = Config.TebexApiKey,

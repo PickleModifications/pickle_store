@@ -3,6 +3,18 @@ local AwaitingTransactions = {}
 local RedeemingUsers = {}
 local PerformingAction = {}
 
+function GetFilteredPlayerIdentifiers(source)
+    local source = tonumber(source)
+    if not source then return end
+    local identifiers = GetPlayerIdentifiers(source)
+    local filteredIdentifiers = {}
+    for i=1, #identifiers do
+        if string.match(identifiers[i], "ip:") and Config.DisableIPIdentifier then
+            table.insert(filteredIdentifiers, identifiers[i])
+        end
+    end
+end
+
 function GetPlayerPrefixIdentifier(source)
     local source = tonumber(source)
     if not source then return end
@@ -149,7 +161,7 @@ end
 
 function GetStringPlayer(source)
     local name = GetPlayerName(source)
-    name = "**Name:** ".. name .. " (ID: " .. source .. ")\n**Identifiers:**\n`" .. json.encode(GetPlayerIdentifiers(source), {indent = true}) .. "`"
+    name = "**Name:** ".. name .. " (ID: " .. source .. ")\n**Identifiers:**\n`" .. json.encode(GetFilteredPlayerIdentifiers(source), {indent = true}) .. "`"
     return name
 end
 
