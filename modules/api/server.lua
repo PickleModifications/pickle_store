@@ -3,37 +3,6 @@ local AwaitingTransactions = {}
 local RedeemingUsers = {}
 local PerformingAction = {}
 
-function GetFilteredPlayerIdentifiers(source)
-    local source = tonumber(source)
-    if not source then return end
-    local identifiers = GetPlayerIdentifiers(source)
-    local filteredIdentifiers = {}
-    for i=1, #identifiers do
-        if string.match(identifiers[i], "ip:") and Config.DisableIPIdentifier then
-            table.insert(filteredIdentifiers, identifiers[i])
-        end
-    end
-end
-
-function GetPlayerPrefixIdentifier(source)
-    local source = tonumber(source)
-    if not source then return end
-    local prefix = Config.IdentifierPrefix
-    local identifiers = GetPlayerIdentifiers(source)
-    for i=1, #identifiers do
-        if string.match(identifiers[i], prefix .. ":") then
-            return identifiers[i]
-        end
-    end
-    if prefix == "license2" then
-        for i=1, #identifiers do
-            if string.match(identifiers[i], "license:") then
-                return identifiers[i]
-            end
-        end
-    end  
-end
-
 function GenerateProductId()
     local id = nil
     repeat
@@ -102,7 +71,7 @@ function RedeemVerifiedTransaction(transactionId, source, rows)
     end)
     MySQL.Async.execute("INSERT INTO `pts_redeemed_transactions` (`transaction_id`, `identifiers`) VALUES (@transaction_id, @identifiers)", {
         ["@transaction_id"] = transactionId,
-        ["@identifiers"] = json.encode(GetPlayerIdentifiers(source)),
+        ["@identifiers"] = json.encode(GetPlayerIdentifiersArray(source)),
     }, function(rowsChanged)
         debugPrint("Added redeemed transaction for: " .. transactionId, UserInfo[source].username_id)
     end)
@@ -364,7 +333,7 @@ function GetFiveMUsername(identifier, cb)
 end
 
 function IsStoreManager(source)
-    local identifiers = GetPlayerIdentifiers(source)
+    local identifiers = GetPlayerIdentifiersArray(source)
     for i=1, #identifiers do
         for j=1, #Config.StoreManagers do
             if identifiers[i] == Config.StoreManagers[j] then
