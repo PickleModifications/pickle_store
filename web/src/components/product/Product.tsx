@@ -53,9 +53,6 @@ export type Product = {
     commands: string[]
 }
 
-async function fetchTebexUrl(url: string) {
-    return fetch(url, {mode: 'no-cors'}).then((res) => res.url).catch(() => null);
-}
 export function AddPackageToCart(ident: string, tebexApiKey: string, discord: string | number | null | undefined, packageId: number, name: string, fallbackLink: string, cb: (message: string) => void) {
     fetchNui("purchaseProduct", packageId).then((tebexResult: any) => {
         const tebexBuyUrl = tebexResult.url;
@@ -76,9 +73,9 @@ export function AddPackageToCart(ident: string, tebexApiKey: string, discord: st
         async function tick() {
             if (tebexBuyUrl) {
                 if (directCheckout) {
-                    const req = await fetch(tebexBuyUrl as string, {mode: 'no-cors'})
-                    if (req.url) {
-                        const url = new URL(req.url);
+                    const urlPath = await fetch(tebexBuyUrl as string, {mode: 'no-cors'}).then((res) => res.url).catch(() => null);
+                    if (urlPath && urlPath != "") {
+                        const url = new URL(urlPath);
                         const basketId = url.searchParams.get("basket");
                         if (basketId) {
                             await performCartAction(basketId, tebexApiKey, packageId, undefined, discord);
