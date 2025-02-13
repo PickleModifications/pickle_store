@@ -58,6 +58,10 @@ function GetRedeemCommand(args)
     return redeemCommand
 end
 
+function GetIdentifierColumn()
+    return Config.IdentifierColumn or "identifier"
+end
+
 function RedeemVerifiedTransaction(transactionId, source, rows) 
     if AwaitingTransactions[transactionId] then
         TriggerClientEvent("pickle_store:setRedeemStatus", AwaitingTransactions[transactionId], true)
@@ -143,7 +147,7 @@ function AddCoins(source, credit, origin)
         playerCoins = credit,
         origin = origin or "System",
     })
-    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins WHERE `identifier`=@identifier;", {
+    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins WHERE `"..GetIdentifierColumn().."`=@identifier;", {
         ["@coins"] = userInfo.coins,
         ["@identifier"] = GetPlayerPrefixIdentifier(source),
     }, function(rowsChanged)
@@ -166,7 +170,7 @@ function RemoveCoins(source, credit, origin)
             origin = origin or "System",
         })
     end
-    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins WHERE `identifier`=@identifier;", {
+    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins WHERE `"..GetIdentifierColumn().."`=@identifier;", {
         ["@coins"] = userInfo.coins,
         ["@identifier"] = GetPlayerPrefixIdentifier(source),
     }, function(rowsChanged)
@@ -254,7 +258,7 @@ function PurchaseProduct(source, productId, rawFields, clientFields)
 end
 
 function UpdateUser(source)
-    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins, `spins`=@spins, `nextSpinTime`=@nextSpinTime, `purchases`=@purchases WHERE `identifier`=@identifier;", {
+    MySQL.Async.execute("UPDATE `pts_users` SET `coins`=@coins, `spins`=@spins, `nextSpinTime`=@nextSpinTime, `purchases`=@purchases WHERE `"..GetIdentifierColumn().."`=@identifier;", {
         ["@purchases"] = json.encode(UserInfo[source].purchases or {}) or "[]",
         ["@coins"] = UserInfo[source].coins or 0,
         ["@spins"] = UserInfo[source].spins or 0,
@@ -403,10 +407,10 @@ RegisterNetEvent("pickle_store:requestInfo", function()
         local str = string.gsub(identifiers.fivem, "fivem:", "")
         data.username_id = tonumber(str)
     end
-    MySQL.Async.fetchAll("SELECT * FROM `pts_users` WHERE `identifier`=@identifier;", {["@identifier"] = GetPlayerPrefixIdentifier(source)}, function(rows)
+    MySQL.Async.fetchAll("SELECT * FROM `pts_users` WHERE `"..GetIdentifierColumn().."`=@identifier;", {["@identifier"] = GetPlayerPrefixIdentifier(source)}, function(rows)
         if #rows < 1 then
             rows[1] = { coins = 0, spins = 1, nextSpinTime = 0 }
-            MySQL.Async.execute("INSERT IGNORE INTO `pts_users` (`identifier`, `fivem_id`, `discord_id`, `coins`, `spins`, `nextSpinTime`) VALUES (@identifier, @fivem_id, @discord_id, @coins, @spins, @nextSpinTime)", {
+            MySQL.Async.execute("INSERT IGNORE INTO `pts_users` (`"..GetIdentifierColumn().."`, `fivem_id`, `discord_id`, `coins`, `spins`, `nextSpinTime`) VALUES (@identifier, @fivem_id, @discord_id, @coins, @spins, @nextSpinTime)", {
                 ["@identifier"] = GetPlayerPrefixIdentifier(source),
                 ["@fivem_id"] = tostring(data.username_id),
                 ["@discord_id"] = tostring(data.discord_id),
@@ -633,7 +637,7 @@ MySQL.ready(function()
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_redeemed_transactions` (`id` INT PRIMARY KEY AUTO_INCREMENT, `transaction_id` VARCHAR(255), `identifiers` LONGTEXT)", {}, function(rowsChanged)
         if rowsChanged > 0 then debugPrint("Created table `pts_redeemed_transactions` with " .. rowsChanged .. " rows changed.") end
     end)
-    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`identifier` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT, `spins` INT, `nextSpinTime` INT, `purchases` LONGTEXT)", {}, function(rowsChanged)
+    MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_users` (`"..GetIdentifierColumn().."` VARCHAR(255) PRIMARY KEY, `fivem_id` VARCHAR(255), `discord_id` VARCHAR(255), `coins` INT, `spins` INT, `nextSpinTime` INT, `purchases` LONGTEXT)", {}, function(rowsChanged)
         if rowsChanged > 0 then debugPrint("Created table `pts_users` with " .. rowsChanged .. " rows changed.") end
     end)
     MySQL.Async.execute("CREATE TABLE IF NOT EXISTS `pts_products` ( `id` VARCHAR(255) PRIMARY KEY, `title` varchar(255) NOT NULL, `description` longtext NOT NULL, `image` longtext NOT NULL, `coins` int(11) NOT NULL DEFAULT 0, `globalLimit` int(11) DEFAULT 0, `userLimit` int(11) DEFAULT 0, `category` longtext DEFAULT NULL, `commands` longtext DEFAULT NULL )", {}, function(rowsChanged)

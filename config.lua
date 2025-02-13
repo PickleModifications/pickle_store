@@ -3,6 +3,7 @@ Config.Language = "en"
 Config.Debug = false -- This enables debugging prints.
 Config.DisableIPIdentifier = false -- This disables the IP identifier when logging players.
 Config.DisableAllProductsCategory = false -- This disables the all products category from being shown in the store to non-managers.
+Config.IdentifierColumn = "player_identifier" -- This is the column in the database that stores the player's identifier.
 -- REQUIRED TO CHANGE:
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
 Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.

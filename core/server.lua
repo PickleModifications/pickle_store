@@ -22,6 +22,7 @@ function GetFilteredPlayerIdentifiers(source)
             table.insert(filteredIdentifiers, identifiers[i])
         end
     end
+    return filteredIdentifiers
 end
 
 function GetPlayerPrefixIdentifier(source)

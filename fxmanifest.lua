@@ -2,7 +2,7 @@ fx_version "cerulean"
 game "gta5"
 author "Pickle Mods"
 description "The best system for in-game monetization using Tebex."
-version "v1.1.3b.2"
+version "v1.1.3b.3"
 
 ui_page "nui/index.html"
 
