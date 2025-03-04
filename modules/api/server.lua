@@ -555,10 +555,16 @@ RegisterNetEvent("pickle_store:spinWheel", function()
     end
 end)
 
-AddEventHandler("onPlayerDropped", function(reason)
+AddEventHandler("playerDropped", function(reason)
     local source = source
     if UserInfo[source] then
+        debugPrint("Tebex player dropped: ", source, UserInfo[source])
         UserInfo[source] = nil
+    end
+    for k,v in pairs(AwaitingTransactions) do
+        if v == source then
+            AwaitingTransactions[k] = nil
+        end
     end
 end)
 
