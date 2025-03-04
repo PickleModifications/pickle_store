@@ -38,4 +38,15 @@ server_scripts {
 	"config_sv.lua",
 }
 
+escrow_ignore {
+	"config.lua",
+	"config_sv.lua",
+	"__INSTALL/**/*.*",
+	"core/*.*",
+	"bridge/**/**/*.*",
+	"bridge/**/*.*",
+    "locales/locale.lua",
+    "locales/translations/*.lua",
+}
+
 lua54 'yes'
