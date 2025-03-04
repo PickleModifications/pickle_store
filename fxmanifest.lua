@@ -2,7 +2,7 @@ fx_version "cerulean"
 game "gta5"
 author "Pickle Mods"
 description "The best system for in-game monetization using Tebex."
-version "v1.1.3"
+version "v1.1.4.b"
 
 ui_page "nui/index.html"
 
@@ -39,14 +39,3 @@ server_scripts {
 }
 
 lua54 'yes'
-
-escrow_ignore {
-	"config.lua",
-	"config_sv.lua",
-	"__INSTALL/**/*.*",
-	"core/*.*",
-	"bridge/**/**/*.*",
-	"bridge/**/*.*",
-    "locales/locale.lua",
-    "locales/translations/*.lua",
-}
