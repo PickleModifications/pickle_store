@@ -172,7 +172,7 @@ RegisterNetEvent("pickle_store:openStore", function(products)
     })
 end)
 
-RegisterCommand("store", function()
+RegisterCommand(Config.StoreCommand or "store", function()
     TriggerScreenblurFadeIn(1000)
     SetNuiFocus(true, true)
     SendNUIMessage({

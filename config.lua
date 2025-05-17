@@ -6,6 +6,7 @@ Config.DisableAllProductsCategory = false -- This disables the all products cate
 Config.IdentifierColumn = "player_identifier" -- This is the column in the database that stores the player's identifier.
 -- REQUIRED TO CHANGE:
 Config.Theme = "dark" -- "dark", "light", "pickle", "midnight", "red"
+Config.StoreCommand = "donate" -- This is the command that opens the store.
 Config.ItemImageFolder = "nui://ox_inventory/web/images" -- Don't put a slash at the end.
 Config.TebexStoreUrl = "SET_URL_HERE" -- Your Tebex store URL. This is required for the store to function if they are not logged in.
 Config.TebexApiKey = "SET_PUBLIC_KEY_HERE" -- Your Tebex Public API key (This is "Public Key" from https://creator.tebex.io/developers/api-keys).
