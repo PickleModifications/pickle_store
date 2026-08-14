@@ -85,6 +85,20 @@ Config.DailySpin = {
         },
     }
 }
+Config.PlaytimeRewards = {
+    -- Reward players with coins/items/etc. for every interval of time they spend on the server.
+    -- Playtime is tracked per session while the player is connected; it is not stored between reconnects.
+    enabled = false, -- Set to true to enable time-played rewards.
+    interval = 3600, -- How often (in seconds) a reward is granted. 3600 = every 60 minutes of playtime.
+    notify = true, -- Whether to show a notification to the player when they receive a reward.
+    notifyMessage = "You have been rewarded for your playtime!", -- Message shown when notify is true.
+    -- Commands to run each time a player reaches the interval. Same format as Config.DailySpin prizes.
+    -- Each entry is { "command string", { extra fields } }. See Config.CustomCommands for available commands.
+    commands = {
+        {"pts_givecoins 50", {}}, -- Give 50 coins every interval.
+        -- {"pts_giveitem water 1", {}}, -- Example: also give an item.
+    },
+}
 -- OPTIONAL TO CHANGE:
 Config.HiddenPackages = { -- These are the packages that are hidden from the store. Coin packages are automatically added here.
     --6661855,
